@@ -5,7 +5,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "node --test test/",
+    "test": "node --test",
     "typecheck": "tsc -p jsconfig.json",
     "start": "python3 -m http.server 8080"
   },
