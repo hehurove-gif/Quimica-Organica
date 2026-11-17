@@ -1,0 +1,13 @@
+{
+  "name": "quimica-organica",
+  "version": "0.1.0",
+  "description": "Editor educativo de Química Orgánica (bachillerato): nomenclatura en español <-> estructura, sin IA generativa.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/",
+    "typecheck": "tsc -p jsconfig.json",
+    "start": "python3 -m http.server 8080"
+  },
+  "license": "UNLICENSED"
+}
