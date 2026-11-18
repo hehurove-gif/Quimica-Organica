@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Química Orgánica · Nomenclatura → Estructura</title>
+  <link rel="stylesheet" href="src/ui/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Química Orgánica</h1>
+    <p class="sub">Escribe un nombre y mira la estructura. Todo se calcula con reglas, sin IA.</p>
+  </header>
+
+  <main>
+    <section class="entrada" aria-labelledby="lbl">
+      <label id="lbl" for="nombre">Nombre del compuesto</label>
+      <input id="nombre" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+             placeholder="p. ej. 5-fluoro-2-metil-1-yodohexano  ·  bromuro de etilo">
+      <div id="leido" class="leido" aria-hidden="true"></div>
+      <div class="ejemplos" role="group" aria-label="Ejemplos">
+        <span>Prueba:</span>
+        <button type="button" data-ej="bromuro de isobutilo">bromuro de isobutilo</button>
+        <button type="button" data-ej="2-metil-1-bromopropano">2-metil-1-bromopropano</button>
+        <button type="button" data-ej="bromuro de etilo">bromuro de etilo</button>
+        <button type="button" data-ej="5-fluor-2-metil-1-yodo-hexano">5-fluor-2-metil-1-yodo-hexano</button>
+        <button type="button" data-ej="bromopropano">bromopropano</button>
+        <button type="button" data-ej="propanol">propanol</button>
+      </div>
+    </section>
+
+    <div id="estado" class="estado" role="status" aria-live="polite"></div>
+
+    <div id="resultado" hidden>
+      <section class="dibujo" aria-label="Estructura">
+        <div class="barra">
+          <h2>Estructura semidesarrollada</h2>
+          <label class="chk"><input id="loc" type="checkbox" checked> Mostrar numeración</label>
+        </div>
+        <div id="svg" class="svg"></div>
+        <p id="semi" class="semi"></p>
+      </section>
+
+      <section class="nombres" aria-label="Nombres">
+        <h2>Nombres</h2>
+        <dl id="nombres"></dl>
+      </section>
+
+      <section id="avisos-sec" aria-label="Observaciones" hidden>
+        <h2>Observaciones</h2>
+        <ul id="avisos" class="avisos"></ul>
+      </section>
+
+      <section aria-label="Explicación paso a paso">
+        <h2>Cómo se construye, paso a paso</h2>
+        <ol id="pasos" class="pasos"></ol>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <p>v0.1 · Alcanos, radicales alquilo y halogenuros. Alquenos, alcoholes y demás familias llegan en las siguientes fases.</p>
+  </footer>
+
+  <script type="module" src="src/ui/app.js"></script>
+</body>
+</html>

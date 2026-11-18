@@ -52,7 +52,7 @@ test('layout: ningún par de átomos se superpone (casos típicos del temario)',
   const casos = ['hexano', '5-fluoro-2-metil-1-yodohexano', '2,2-dimetilpropano', '3-etil-2-metilpentano', '2,2,4-trimetilpentano', '1-bromo-2-metilpropano', 'tetraclorometano', '2,3-dimetilbutano', '3,3-dietilpentano'];
   for (const nombre of casos) {
     const { mol, chain } = make(nombre);
-    const pos = [...layout(mol, chain, 46).entries()];
+    const pos = [...layout(mol, chain, 68).entries()];
     for (let i = 0; i < pos.length; i++) {
       for (let j = i + 1; j < pos.length; j++) {
         const d = Math.hypot(pos[i][1].x - pos[j][1].x, pos[i][1].y - pos[j][1].y);

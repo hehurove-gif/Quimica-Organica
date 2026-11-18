@@ -187,7 +187,7 @@ function atomLabel(mol, id, pos) {
  * @returns {string}
  */
 export function renderSvg(mol, chain, opts = {}) {
-  const L = opts.bond ?? 46;
+  const L = opts.bond ?? 68;
   const fs = opts.fontSize ?? 20;
   const pos = layout(mol, chain, L);
   const labels = new Map(mol.atoms.map((a) => [a.id, atomLabel(mol, a.id, pos)]));
@@ -217,8 +217,8 @@ export function renderSvg(mol, chain, opts = {}) {
 
   /** Recorte del enlace en el borde de la etiqueta. @param {number} id @param {number} ux @param {number} uy */
   const trim = (id, ux, uy) => {
-    const hw = width(id) / 2 + 3;
-    const hh = h / 2 + 3;
+    const hw = width(id) / 2 + 2;
+    const hh = h / 2 + 2;
     const tx = Math.abs(ux) > 1e-6 ? hw / Math.abs(ux) : Infinity;
     const ty = Math.abs(uy) > 1e-6 ? hh / Math.abs(uy) : Infinity;
     return Math.min(tx, ty);

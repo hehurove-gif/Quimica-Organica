@@ -1,0 +1,64 @@
+:root {
+  --bg: #fafaf7; --fg: #1d2330; --muted: #5d6676; --card: #ffffff; --line: #dcdfe6;
+  --accent: #1456c4; --accent-soft: #dbe7fb;
+  --ok: #17692e; --ok-bg: #e2f4e7; --warn: #8a5a00; --warn-bg: #fff1d1;
+  --err: #a1231f; --err-bg: #fde4e2; --info: #2a4f8f; --info-bg: #e6eefb;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171f; --fg: #e8ebf2; --muted: #9aa3b5; --card: #1d212c; --line: #30374a;
+    --accent: #7eb0ff; --accent-soft: #263a5e;
+    --ok: #7fdc97; --ok-bg: #173424; --warn: #f2c66b; --warn-bg: #3a2e12;
+    --err: #ff9d97; --err-bg: #3d1c1a; --info: #9cc0ff; --info-bg: #1f2b45;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header, main, footer { max-width: 920px; margin: 0 auto; padding: 0 16px; }
+header { padding-top: 24px; }
+h1 { margin: 0; font-size: 1.6rem; }
+h2 { font-size: 1.05rem; margin: 0 0 8px; }
+.sub { margin: 4px 0 16px; color: var(--muted); }
+section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+label { font-weight: 600; display: block; margin-bottom: 6px; }
+input[type=text] { width: 100%; font: inherit; font-size: 1.2rem; padding: 10px 12px; border: 2px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); }
+input[type=text]:focus { outline: none; border-color: var(--accent); }
+.leido { min-height: 1.6em; margin-top: 8px; font-size: 1.05rem; word-break: break-word; }
+.tok { border-bottom: 3px solid var(--accent); padding-bottom: 1px; cursor: default; border-radius: 2px; }
+.tok.hl { background: var(--accent-soft); }
+.tok.cadena { border-bottom-style: double; }
+.ejemplos { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; color: var(--muted); font-size: .9rem; }
+.ejemplos button { font: inherit; font-size: .88rem; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; }
+.ejemplos button:hover, .ejemplos button:focus-visible { border-color: var(--accent); outline: none; }
+.estado { margin: 12px 0; padding: 10px 14px; border-radius: 10px; font-weight: 600; }
+.estado:empty { display: none; }
+.estado small { display: block; font-weight: 400; margin-top: 2px; }
+.estado.valido { background: var(--ok-bg); color: var(--ok); }
+.estado.incompleto { background: var(--info-bg); color: var(--info); }
+.estado.invalido { background: var(--err-bg); color: var(--err); }
+.estado.fuera_de_alcance { background: var(--warn-bg); color: var(--warn); }
+.barra { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.chk { font-weight: 400; font-size: .9rem; color: var(--muted); display: flex; gap: 6px; align-items: center; margin: 0; }
+.svg { overflow-x: auto; padding: 8px 0; color: var(--fg); text-align: center; }
+.svg svg { max-width: 100%; height: auto; }
+.semi { margin: 0; text-align: center; font-size: 1.1rem; color: var(--muted); }
+dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; }
+dt { color: var(--muted); }
+dd { margin: 0; font-weight: 600; }
+.avisos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.avisos li { padding: 8px 12px; border-radius: 8px; background: var(--info-bg); color: var(--info); }
+.avisos li.aviso { background: var(--warn-bg); color: var(--warn); }
+.avisos li b { margin-right: 4px; }
+.pasos { margin: 0; padding-left: 1.3rem; display: grid; gap: 8px; }
+.pasos li { padding: 4px 8px; border-radius: 8px; }
+.pasos li:hover, .pasos li.hl { background: var(--accent-soft); }
+.pasos li b { display: block; }
+footer { color: var(--muted); font-size: .85rem; padding-bottom: 28px; }
+/* resaltado cruzado en el SVG */
+svg .atom .hit { fill: transparent; }
+svg .atom { cursor: default; }
+svg .atom.hl .hit { fill: var(--accent-soft); }
+svg .atom.hl text { fill: var(--accent); font-weight: 700; }
+svg .bonds line.hl { stroke: var(--accent); stroke-width: 3; }
+svg .locant { fill: currentColor; }
+@media (max-width: 520px) { dl { grid-template-columns: 1fr; } dt { margin-top: 6px; } }
