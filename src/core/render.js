@@ -11,25 +11,48 @@ const SUB = '₀₁₂₃₄₅₆₇₈₉';
 const sub = (n) => (n > 1 ? String(n).split('').map((d) => SUB[Number(d)]).join('') : '');
 
 /**
- * Texto de un carbono con sus hidrógenos y halógenos "compactos": CH₂, CHBr₂, CCl₃.
+ * Texto de un carbono con sus hidrógenos, halógenos y oxígenos "compactos":
+ * CH₂, CHBr₂, CCl₃, CH₂OH, CH(OH), C(=O), CHO, COOH.
  * @param {Molecule} mol
  * @param {number} id
  * @param {number[]} skip vecinos que no se escriben aquí (cadena / padre / ramas de carbono)
+ * @param {'start' | 'end' | 'inner'} [where] posición en la línea (para escribir HO– / –OH)
  */
-function carbonText(mol, id, skip) {
+function carbonText(mol, id, skip, where = 'inner') {
   const h = mol.implicitH(id);
   /** @type {Record<string, number>} */
   const halos = {};
+  let oxo = 0;
+  let oh = 0;
   for (const nb of mol.neighbors(id)) {
+    if (skip.includes(nb.id)) continue;
     const el = mol.element(nb.id);
-    if (HALOGENS.includes(el) && !skip.includes(nb.id)) halos[el] = (halos[el] || 0) + 1;
+    if (HALOGENS.includes(el)) halos[el] = (halos[el] || 0) + 1;
+    else if (el === 'O') {
+      if (nb.order === 2) oxo++;
+      else oh++;
+    }
   }
   const hText = h ? `H${sub(h)}` : '';
   const xText = Object.keys(halos)
     .sort()
     .map((el) => `${el}${sub(halos[el])}`)
     .join('');
-  return `C${hText}${xText}`;
+  const carbonNbrs = mol.neighbors(id).filter((x) => mol.element(x.id) === 'C').length;
+  if (oxo === 1 && oh === 1 && !xText) return h ? 'HCOOH' : where === 'start' ? 'HOOC' : 'COOH'; // ácido carboxílico
+  if (oxo === 1 && oh === 0 && !xText && carbonNbrs <= 1) {
+    if (h === 1) return where === 'start' ? 'OHC' : 'CHO'; // aldehído
+    if (h === 2) return 'HCHO'; // metanal
+  }
+  let t = `C${hText}${xText}`;
+  if (oxo) t += oxo === 1 ? '(=O)' : `(=O)${sub(oxo)}`;
+  if (oh) {
+    const single = oh === 1;
+    if (where === 'start' && single) t = `HO${t}`;
+    else if (where === 'end' && single) t += 'OH';
+    else t += single ? '(OH)' : `(OH)${sub(oh)}`;
+  }
+  return t;
 }
 
 /**
@@ -41,7 +64,7 @@ function carbonText(mol, id, skip) {
  */
 function branchText(mol, id, parent) {
   const kids = mol.neighbors(id).map((n) => n.id).filter((k) => k !== parent && mol.element(k) === 'C');
-  const base = carbonText(mol, id, [parent]);
+  const base = carbonText(mol, id, [parent, ...kids], kids.length ? 'inner' : 'end');
   if (kids.length === 0) return base;
   const parts = kids.map((k) => branchText(mol, k, id));
   const last = parts.pop();
@@ -56,23 +79,33 @@ function branchText(mol, id, parent) {
  */
 export function semidesarrollada(mol, chain) {
   const n = chain.length;
-  const parts = chain.map((id, i) => {
+  /** @param {number} a @param {number} b */
+  const joint = (a, b) => {
+    const o = mol.neighbors(a).find((x) => x.id === b)?.order ?? 1;
+    return o === 3 ? '≡' : o === 2 ? '=' : '–';
+  };
+  let out = '';
+  chain.forEach((id, i) => {
     const prev = chain[i - 1];
     const next = chain[i + 1];
     const others = mol.neighbors(id).map((x) => x.id).filter((x) => x !== prev && x !== next);
     const carbonBranches = others.filter((x) => mol.element(x) === 'C');
     const halos = others.filter((x) => HALOGENS.includes(mol.element(x)));
     const isEnd = n > 1 && (i === 0 || i === n - 1);
+    const where = n === 1 ? 'end' : i === 0 ? 'start' : i === n - 1 ? 'end' : 'inner';
+    let part;
     // extremo con un único halógeno: se escribe como grupo aparte: Br–CH₂–… / …–CH₂–Br
-    if (isEnd && carbonBranches.length === 0 && halos.length === 1) {
+    if (isEnd && carbonBranches.length === 0 && halos.length === 1 && others.length === 1) {
       const x = mol.element(halos[0]);
       const c = carbonText(mol, id, halos);
-      return i === 0 ? `${x}–${c}` : `${c}–${x}`;
+      part = i === 0 ? `${x}–${c}` : `${c}–${x}`;
+    } else {
+      const base = carbonText(mol, id, carbonBranches, where);
+      part = base + carbonBranches.map((b) => `(${branchText(mol, b, id)})`).join('');
     }
-    const base = carbonText(mol, id, carbonBranches);
-    return base + carbonBranches.map((b) => `(${branchText(mol, b, id)})`).join('');
+    out += (i ? joint(chain[i - 1], id) : '') + part;
   });
-  return parts.join('–');
+  return out;
 }
 
 /* ------------------------------ SVG ------------------------------ */
@@ -157,8 +190,8 @@ export function layout(mol, chain, L) {
  */
 function atomLabel(mol, id, pos) {
   const el = mol.element(id);
-  if (el !== 'C') return [{ t: el, sub: false }];
   const h = mol.implicitH(id);
+  if (el !== 'C' && h === 0) return [{ t: el, sub: false }];
   const nbs = mol.neighbors(id);
   const me = /** @type {Pt} */ (pos.get(id));
   const leafToRight = nbs.length === 1 && /** @type {Pt} */ (pos.get(nbs[0].id)).x > me.x + 4;
@@ -170,9 +203,9 @@ function atomLabel(mol, id, pos) {
   };
   if (leafToRight && h > 0) {
     hPart();
-    out.push({ t: 'C', sub: false });
+    out.push({ t: el, sub: false });
   } else {
-    out.push({ t: 'C', sub: false });
+    out.push({ t: el, sub: false });
     hPart();
   }
   return out;
@@ -235,9 +268,14 @@ export function renderSvg(mol, chain, opts = {}) {
     const uy = (pb.y - pa.y) / len;
     const ta = trim(b.a, ux, uy);
     const tb = trim(b.b, ux, uy);
-    lines.push(
-      `<line data-bond="${b.a}-${b.b}" x1="${f(pa.x + ux * ta)}" y1="${f(pa.y + uy * ta)}" x2="${f(pb.x - ux * tb)}" y2="${f(pb.y - uy * tb)}"/>`,
-    );
+    const offsets = b.order === 3 ? [-3.6, 0, 3.6] : b.order === 2 ? [-2.6, 2.6] : [0];
+    for (const o of offsets) {
+      const ox = -uy * o;
+      const oy = ux * o;
+      lines.push(
+        `<line data-bond="${b.a}-${b.b}" x1="${f(pa.x + ux * ta + ox)}" y1="${f(pa.y + uy * ta + oy)}" x2="${f(pb.x - ux * tb + ox)}" y2="${f(pb.y - uy * tb + oy)}"/>`,
+      );
+    }
   }
 
   /** @type {string[]} */

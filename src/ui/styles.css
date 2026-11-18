@@ -62,3 +62,5 @@ svg .atom.hl text { fill: var(--accent); font-weight: 700; }
 svg .bonds line.hl { stroke: var(--accent); stroke-width: 3; }
 svg .locant { fill: currentColor; }
 @media (max-width: 520px) { dl { grid-template-columns: 1fr; } dt { margin-top: 6px; } }
+.tok.insaturacion { border-bottom-style: dotted; }
+.tok.funcion { border-bottom-style: dashed; }

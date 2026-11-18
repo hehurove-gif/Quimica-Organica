@@ -77,9 +77,41 @@ export function explain(ast, built, mol, canon) {
     const n = ast.parent.n;
     steps.push({
       title: 'Cadena principal',
-      text: `«${stemOf(n)}ano»: ${n} carbono${n === 1 ? '' : 's'} unidos en cadena (C1${n > 1 ? ` … C${n}` : ''}), todos con enlaces sencillos.`,
+      text: `«${stemOf(n)}${ast.unsat || ast.suffix ? '-' : 'ano'}»: ${n} carbono${n === 1 ? '' : 's'} unidos en cadena (C1${n > 1 ? ` … C${n}` : ''}). ${ast.unsat ? 'Los enlaces son sencillos salvo los que indica «-' + (ast.unsat.kind === 'en' ? 'eno' : 'ino') + '».' : 'Todos los enlaces son sencillos.'}`,
       atomIds: chain,
       spans: ast.parent.span ? [ast.parent.span] : [],
+    });
+  }
+
+  for (const t of built.trace.filter((x) => x.role === 'insaturacion')) {
+    const triple = t.label === 'ino';
+    const bonds = built.molecule ? mol.bonds.filter((b) => b.order > 1 && t.atomIds.includes(b.a) && t.atomIds.includes(b.b)) : [];
+    const where = bonds
+      .map((b) => Math.min(chain.indexOf(b.a), chain.indexOf(b.b)) + 1)
+      .sort((x, y) => x - y)
+      .map((i) => `C${i}=C${i + 1}`.replace('=', triple ? '≡' : '='))
+      .join(', ');
+    steps.push({
+      title: `Enlace ${triple ? 'triple' : 'doble'} «-${t.label}»`,
+      text: `Hay ${bonds.length === 1 ? 'un enlace' : `${bonds.length} enlaces`} ${triple ? 'triple' : 'doble'} entre carbonos (${where}). Cada carbono del enlace pierde hidrógenos para conservar sus 4 enlaces.`,
+      atomIds: t.atomIds,
+      spans: t.span ? [t.span] : [],
+    });
+  }
+  for (const t of built.trace.filter((x) => x.role === 'funcion')) {
+    /** @type {Record<string, string>} */
+    const what = {
+      ol: 'alcohol: un grupo hidroxilo –OH en lugar de un hidrógeno',
+      al: 'aldehído: un grupo –CHO en el extremo de la cadena (el C1 lleva =O y un hidrógeno)',
+      ona: 'cetona: un grupo carbonilo C=O en un carbono interior de la cadena',
+      oico: 'ácido carboxílico: un grupo –COOH en el extremo de la cadena (=O y –OH en el mismo carbono)',
+    };
+    const acid = ast.form === 'sustitutivo' && ast.acid ? ' La palabra «ácido» confirma la función.' : '';
+    steps.push({
+      title: `Grupo principal «-${t.label}»`,
+      text: `Es un ${what[t.label]}.${acid} El grupo principal fija la cadena y recibe el localizador más bajo posible.`,
+      atomIds: t.atomIds,
+      spans: t.span ? [t.span] : [],
     });
   }
 
