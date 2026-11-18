@@ -4,19 +4,43 @@
  * Todo en minúsculas y sin acentos (ver normalize en parser.js).
  */
 
-/** Raíces de cadena: [raíz, nº de carbonos]. */
-export const STEMS = /** @type {[string, number][]} */ ([
-  ['met', 1],
-  ['et', 2],
-  ['prop', 3],
-  ['but', 4],
-  ['pent', 5],
-  ['hex', 6],
-  ['hept', 7],
-  ['oct', 8],
-  ['non', 9],
-  ['dec', 10],
-]);
+const UNITS_PREFIX = ['', 'hen', 'do', 'tri', 'tetra', 'penta', 'hexa', 'hepta', 'octa', 'nona'];
+
+/**
+ * Raíces de 1 a 99 carbonos: [raíz, nº de carbonos].
+ * 11–19 undec…nonadec; 20 eicos (también «icos»); 21–29 heneicos, docos, tricos…;
+ * decenas: triacont, tetracont…; unidades delante: hentriacont, dotriacont…
+ * @returns {[string, number][]}
+ */
+function buildStems() {
+  /** @type {[string, number][]} */
+  const out = [['met', 1], ['et', 2], ['prop', 3], ['but', 4], ['pent', 5], ['hex', 6], ['hept', 7], ['oct', 8], ['non', 9], ['dec', 10]];
+  const teens = ['undec', 'dodec', 'tridec', 'tetradec', 'pentadec', 'hexadec', 'heptadec', 'octadec', 'nonadec'];
+  teens.forEach((t, i) => out.push([t, 11 + i]));
+  out.push(['eicos', 20]);
+  const tens = ['', '', 'cos', 'triacont', 'tetracont', 'pentacont', 'hexacont', 'heptacont', 'octacont', 'nonacont'];
+  for (let n = 21; n <= 99; n++) {
+    const t = Math.floor(n / 10);
+    const u = n % 10;
+    if (u === 0) {
+      out.push([tens[t] === 'cos' ? 'eicos' : tens[t], n]);
+    } else if (t === 2) {
+      out.push([u === 1 ? 'heneicos' : `${UNITS_PREFIX[u]}cos`, n]);
+    } else {
+      out.push([`${UNITS_PREFIX[u]}${tens[t]}`, n]);
+    }
+  }
+  return out;
+}
+
+/** Raíces de cadena (1–99 carbonos). */
+export const STEMS = buildStems();
+
+/** Variantes que también se aceptan al leer (no se usan al escribir). */
+const STEM_ALIASES = /** @type {[string, number][]} */ ([['icos', 20], ['henicos', 21]]);
+
+/** Todas las raíces aceptadas al leer. */
+export const STEMS_READ = [...STEMS, ...STEM_ALIASES];
 
 /** Raíz por número de carbonos. @param {number} n */
 export function stemOf(n) {
@@ -24,7 +48,7 @@ export function stemOf(n) {
   return f ? f[0] : null;
 }
 
-/** Multiplicadores: [prefijo, cantidad]. */
+/** Multiplicadores: [prefijo, cantidad] (2–20). */
 export const MULTS = /** @type {[string, number][]} */ ([
   ['di', 2],
   ['tri', 3],
@@ -35,6 +59,16 @@ export const MULTS = /** @type {[string, number][]} */ ([
   ['octa', 8],
   ['nona', 9],
   ['deca', 10],
+  ['undeca', 11],
+  ['dodeca', 12],
+  ['trideca', 13],
+  ['tetradeca', 14],
+  ['pentadeca', 15],
+  ['hexadeca', 16],
+  ['heptadeca', 17],
+  ['octadeca', 18],
+  ['nonadeca', 19],
+  ['icosa', 20],
 ]);
 
 /** @param {number} k */

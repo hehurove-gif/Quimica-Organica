@@ -18,7 +18,7 @@ import {
   Ctx, alts, choice, eof, integer, lit, many, opt, seq, ws,
 } from './peg.js';
 import {
-  COMMON_COMPOUNDS, COMMON_RADICALS, FUERA_DE_ALCANCE, HALIDE_WORDS, HALO_PREFIXES, MULTS, STEMS,
+  COMMON_COMPOUNDS, COMMON_RADICALS, FUERA_DE_ALCANCE, HALIDE_WORDS, HALO_PREFIXES, MULTS, STEMS_READ,
 } from './lexicon.js';
 
 /**
@@ -65,8 +65,8 @@ export function normalize(s) {
     .replace(/[–—−]/g, '-');
 }
 
-const stemP = alts(STEMS.map(([s]) => s), 'una cadena (met-, et-, prop-, but-, pent-, hex-…)');
-const stemN = /** @type {Record<string, number>} */ (Object.fromEntries(STEMS));
+const stemP = alts(STEMS_READ.map(([s]) => s), 'una cadena (met-, et-, prop-, but-, pent-, hex-…)');
+const stemN = /** @type {Record<string, number>} */ (Object.fromEntries(STEMS_READ));
 const multP = alts(MULTS.map(([m]) => m), 'un multiplicador (di, tri, tetra…)');
 const multN = /** @type {Record<string, number>} */ (Object.fromEntries(MULTS));
 const haloP = alts(Object.keys(HALO_PREFIXES), 'un halógeno (fluoro, cloro, bromo, yodo)');
@@ -267,12 +267,19 @@ function groupP(ctx, pos) {
   /** @type {Span | null} */
   let multSpan = null;
   const m = multP(ctx, pos);
+  /** @type {{ pos: number, value: any } | null} */
+  let s = null;
   if (m) {
-    mult = multN[m.value];
-    multSpan = { from: pos, to: m.pos };
-    pos = m.pos;
+    // «tridecil» es un radical de 13 carbonos, no «tri + decil»: si se lee sin multiplicador, gana
+    const whole = subP(ctx, pos);
+    if (whole && !(whole.value.kind === 'halo')) s = whole;
+    if (!s) {
+      mult = multN[m.value];
+      multSpan = { from: pos, to: m.pos };
+      pos = m.pos;
+    }
   }
-  const s = subP(ctx, pos);
+  if (!s) s = subP(ctx, pos);
   if (!s) return null;
   const subSpan = { from: pos, to: s.pos };
   pos = s.pos;

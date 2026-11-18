@@ -115,10 +115,10 @@ test('moléculas fuera de alcance no reciben nombre inventado', () => {
   // eninos (doble y triple en la misma cadena): todavía no
   const en = fromSmiles('C=CC#C');
   assert.equal(nameMolecule(en).ok, false);
-  // cadena de 11 carbonos
+  // cadena de 100 carbonos (el límite es 99)
   const big = new Molecule();
   let prev = big.addAtom('C');
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 99; i++) {
     const id = big.addAtom('C');
     big.addBond(prev, id);
     prev = id;

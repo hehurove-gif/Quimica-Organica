@@ -41,7 +41,7 @@ class Inviable extends Unsupported {}
  * } | { ok: false, reason: string }} NameResult
  */
 
-const MAX_CHAIN = 10;
+const MAX_CHAIN = 99;
 
 /** Clave para ordenar alfabéticamente: sin localizadores, sin sec-/terc-, sin paréntesis. @param {string} text */
 function sortKeyOf(text) {
@@ -256,7 +256,7 @@ function compose(subs, n, omitLocants) {
       const positions = g.positions.sort((x, y) => x - y);
       const k = positions.length;
       const mult = k > 1 ? multOf(k) : '';
-      if (mult === null) throw new Unsupported(`Hay ${k} sustituyentes iguales (el límite actual es 10).`);
+      if (mult === null) throw new Unsupported(`Hay ${k} sustituyentes iguales (el límite actual es 20).`);
       const t = g.complex ? `(${g.text})` : g.text;
       return omitLocants ? `${mult}${t}` : `${positions.join(',')}-${mult}${t}`;
     })
