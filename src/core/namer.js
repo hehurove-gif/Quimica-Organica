@@ -424,6 +424,12 @@ function whyNot(mol) {
         return 'Los éteres y otras estructuras con oxígeno entre dos átomos todavía no se pueden nombrar.';
       }
     }
+    if (a.el === 'C') {
+      const ox = oxygensOf(mol, a.id);
+      if (ox.oxo.length > 1 || (ox.oxo.length === 1 && ox.oh.length > 1)) {
+        return 'Carbonos con varios oxígenos (CO₂, ácido carbónico…) todavía no se pueden nombrar.';
+      }
+    }
     if (a.el === 'C' && oxygensOf(mol, a.id).oxo.length && mol.neighbors(a.id).some((nb) => HALOGENS.includes(mol.element(nb.id)))) {
       return 'Los halogenuros de acilo todavía no se pueden nombrar.';
     }
