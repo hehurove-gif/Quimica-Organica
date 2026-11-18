@@ -1,27 +1,42 @@
 // @ts-check
 /**
- * Estructura -> nombre (alcanos acíclicos con halógenos, v0.1) y diagnóstico pedagógico.
+ * Estructura -> nombre (acíclicos: alcanos, alquenos, alquinos, halogenuros, alcoholes,
+ * aldehídos, cetonas y ácidos carboxílicos) y diagnóstico pedagógico.
  *
- * Reglas aplicadas, en este orden (las mismas que se enseñan en bachillerato):
- *   1. Cadena principal = la más larga.
- *   2. Si hay varias del mismo largo: la que tiene MÁS sustituyentes.
- *   3. Numerar desde el extremo que dé los localizadores MÁS BAJOS al conjunto de sustituyentes.
- *   4. Si aún hay empate: el primer sustituyente en orden alfabético recibe el localizador más bajo.
- *   5. Los sustituyentes se escriben en orden alfabético (sin contar di-, tri-…, ni sec-, terc-).
+ * Reglas aplicadas, en este orden (IUPAC 1979, la que se enseña en bachillerato):
+ *   0. Grupo principal = el de mayor prioridad: ácido > aldehído > cetona > alcohol.
+ *      El resto de funciones se nombran como prefijos (hidroxi-, oxo-).
+ *   1. Cadena principal = la que contiene MÁS grupos principales.
+ *   2. Luego, la que contiene MÁS enlaces múltiples.
+ *   3. Luego, la más larga.
+ *   4. Luego, la que tiene MÁS sustituyentes.
+ *   5. Numerar para dar localizadores MÁS BAJOS: primero al grupo principal, luego a los
+ *      enlaces múltiples, luego al conjunto de sustituyentes.
+ *   6. Si aún hay empate: el primer sustituyente en orden alfabético recibe el localizador más bajo.
+ *   7. Los sustituyentes se escriben en orden alfabético (sin contar di-, tri-…, ni sec-, terc-).
  *
  * Es el MISMO módulo de reglas que usa el diagnóstico del nombre escrito por el alumno,
  * para que ida y vuelta nunca se contradigan.
  */
 import { Molecule, HALOGENS } from './molecule.js';
 import { HALIDE_CANON, HALO_CANON, COMMON_RADICALS, multOf, stemOf } from './lexicon.js';
+import { parse } from './parser.js';
+import { build } from './build.js';
 
 class Unsupported extends Error {}
+/** Cadena candidata descartable (deja un enlace múltiple fuera): no es un límite del sistema. */
+class Inviable extends Unsupported {}
 
 /**
  * @typedef {{ pos: number, text: string, sortKey: string, complex: boolean }} Sub
- * @typedef {{ n: number, subs: Sub[], name: string }} Model
+ * @typedef {'acido' | 'aldehido' | 'cetona' | 'alcohol'} FnKind
  * @typedef {{
- *   ok: true, systematic: string, radicofuncional: string | null,
+ *   n: number, subs: Sub[], name: string, iupac: string,
+ *   fn: FnKind | null, fnLocs: number[], unsat: 'en' | 'in' | null, unsatLocs: number[],
+ *   path: number[]
+ * }} Model
+ * @typedef {{
+ *   ok: true, systematic: string, iupac2013: string, radicofuncional: string | null,
  *   model: Model, chain: number[]
  * } | { ok: false, reason: string }} NameResult
  */
@@ -93,14 +108,49 @@ function pathsFrom(mol, start, avoid) {
   return out;
 }
 
+const PRIORITY = /** @type {Record<FnKind, number>} */ ({ acido: 4, aldehido: 3, cetona: 2, alcohol: 1 });
+
+/**
+ * Oxígenos de un carbono: =O (oxo) e hidroxilos (-OH).
+ * @param {Molecule} mol
+ * @param {number} c
+ */
+function oxygensOf(mol, c) {
+  /** @type {number[]} */
+  const oxo = [];
+  /** @type {number[]} */
+  const oh = [];
+  for (const nb of mol.neighbors(c)) {
+    if (mol.element(nb.id) !== 'O') continue;
+    (nb.order === 2 ? oxo : oh).push(nb.id);
+  }
+  return { oxo, oh };
+}
+
+/**
+ * Clase de función de un carbono (la de mayor prioridad) o null.
+ * @param {Molecule} mol
+ * @param {number} c
+ * @returns {FnKind | null}
+ */
+function fnOf(mol, c) {
+  const { oxo, oh } = oxygensOf(mol, c);
+  const cn = carbonNbrs(mol, c).length;
+  if (oxo.length && oh.length) return 'acido';
+  if (oxo.length) return cn <= 1 ? 'aldehido' : 'cetona';
+  if (oh.length) return 'alcohol';
+  return null;
+}
+
 /**
  * Sustituyentes de una cadena numerada (path[0] = C1).
  * @param {Molecule} mol
  * @param {number[]} path
  * @param {number} attachedTo carbono/átomo del que cuelga la cadena si es un radical (-1 si es la cadena principal)
+ * @param {FnKind | null} [principal] grupo principal (null en radicales: no admiten funciones)
  * @returns {Sub[]}
  */
-function subsOf(mol, path, attachedTo) {
+function subsOf(mol, path, attachedTo, principal = null) {
   /** @type {Sub[]} */
   const subs = [];
   path.forEach((id, i) => {
@@ -108,8 +158,19 @@ function subsOf(mol, path, attachedTo) {
       if (nb.id === path[i - 1] || nb.id === path[i + 1]) continue;
       if (i === 0 && nb.id === attachedTo) continue;
       const el = mol.element(nb.id);
+      if (nb.order > 1 && el === 'C') {
+        throw new Inviable('Hay un enlace múltiple fuera de la cadena principal (radicales como vinilo o alilo): todavía no se pueden nombrar.');
+      }
       if (HALOGENS.includes(el)) {
         const text = HALO_CANON[el];
+        subs.push({ pos: i + 1, text, sortKey: text, complex: false });
+      } else if (el === 'O') {
+        const cls = fnOf(mol, id);
+        if (attachedTo !== -1 || principal === null) {
+          throw new Inviable('Un radical con grupo funcional (hidroximetil, formil…) todavía no se puede nombrar.');
+        }
+        if (cls === principal) continue; // forma parte del sufijo
+        const text = nb.order === 2 ? 'oxo' : 'hidroxi';
         subs.push({ pos: i + 1, text, sortKey: text, complex: false });
       } else {
         const r = radicalName(mol, nb.id, id);
@@ -132,8 +193,13 @@ function radicalName(mol, c, parent) {
   if (known) return { text: known, complex: false };
   // radical sistemático: cadena más larga desde el carbono de unión (C1)
   const paths = pathsFrom(mol, c, parent);
-  const best = pickBest(paths.map((p) => ({ path: p, subs: subsOf(mol, p, parent) })));
+  const best = pickBest(paths.map((p) => ({ path: p, subs: subsOf(mol, p, parent, null) })));
   const n = best.path.length;
+  for (let i = 0; i < n - 1; i++) {
+    if (mol.neighbors(best.path[i]).some((x) => x.id === best.path[i + 1] && x.order > 1)) {
+      throw new Inviable('Un radical con enlace múltiple (vinilo, alilo, etinilo…) todavía no se puede nombrar.');
+    }
+  }
   const stem = stemOf(n);
   if (!stem) throw new Unsupported(`El radical tiene una cadena de ${n} carbonos (el límite actual es ${MAX_CHAIN}).`);
   const prefix = compose(best.subs, n, n === 1);
@@ -198,18 +264,143 @@ function compose(subs, n, omitLocants) {
 }
 
 /**
- * Nombre de la cadena con la numeración dada (sin elegir otra).
+ * Grupo principal de la molécula (el de mayor prioridad presente) o null.
+ * @param {Molecule} mol
+ * @returns {FnKind | null}
+ */
+function principalOf(mol) {
+  /** @type {FnKind | null} */
+  let best = null;
+  for (const a of mol.atoms) {
+    if (a.el !== 'C') continue;
+    const k = fnOf(mol, a.id);
+    if (k && (best === null || PRIORITY[k] > PRIORITY[best])) best = k;
+  }
+  return best;
+}
+
+/**
+ * Descripción de una cadena numerada (sin elegir otra): sustituyentes, grupo principal y
+ * enlaces múltiples, más los nombres escolar e IUPAC 2013.
  * @param {Molecule} mol
  * @param {number[]} path
+ * @param {FnKind | null} [principal]
  * @returns {Model}
  */
-export function modelFor(mol, path) {
+export function modelFor(mol, path, principal = principalOf(mol)) {
   const n = path.length;
   const stem = stemOf(n);
   if (!stem) throw new Unsupported(`La cadena principal tiene ${n} carbonos (el límite actual es ${MAX_CHAIN}).`);
-  const subs = subsOf(mol, path, -1);
-  const omit = n === 1 || (n === 2 && subs.length === 1);
-  return { n, subs, name: `${compose(subs, n, omit)}${stem}ano` };
+  const subs = subsOf(mol, path, -1, principal);
+  /** @type {number[]} */
+  const fnLocs = [];
+  if (principal) {
+    path.forEach((id, i) => {
+      if (fnOf(mol, id) !== principal) return;
+      const k = principal === 'alcohol' ? oxygensOf(mol, id).oh.length : 1;
+      for (let j = 0; j < k; j++) fnLocs.push(i + 1);
+    });
+  }
+  /** @type {number[]} */
+  const unsatLocs = [];
+  /** @type {Set<number>} */
+  const orders = new Set();
+  for (let i = 0; i < n - 1; i++) {
+    const o = mol.neighbors(path[i]).find((x) => x.id === path[i + 1])?.order ?? 1;
+    if (o > 1) {
+      unsatLocs.push(i + 1);
+      orders.add(o);
+    }
+  }
+  if (orders.size > 1) throw new Unsupported('Enlaces dobles y triples en la misma cadena (eninos): todavía no se pueden nombrar.');
+  const unsat = orders.size ? (orders.has(2) ? 'en' : 'in') : null;
+  /** @type {Model} */
+  const m = { n, subs, name: '', iupac: '', fn: principal, fnLocs, unsat, unsatLocs, path };
+  m.name = formatName(m, 'escolar', { u: false, s: false });
+  m.iupac = formatName(m, 'iupac', { u: false, s: false });
+  return m;
+}
+
+/**
+ * Escribe el nombre de un modelo.
+ * @param {Model} m
+ * @param {'escolar' | 'iupac'} style
+ * @param {{ u: boolean, s: boolean }} omit omitir localizadores del enlace múltiple / del sufijo
+ * @param {boolean} [omitPrefix] omitir localizadores de los sustituyentes
+ */
+function formatName(m, style, omit, omitPrefix) {
+  const { n, subs, fn, fnLocs, unsat, unsatLocs } = m;
+  const stem = /** @type {string} */ (stemOf(n));
+  const skipPrefix = omitPrefix ?? (n === 1 || (n === 2 && subs.length === 1 && !fn && !unsat));
+  const prefixes = compose(subs, n, skipPrefix);
+  const uk = unsat === 'en' ? 'en' : 'in';
+  const uMult = unsatLocs.length;
+  const sMult = fnLocs.length;
+  const mw = (/** @type {number} */ k) => (k > 1 ? multOf(k) || '' : '');
+  const sWord = fn ? { acido: 'oico', aldehido: 'al', cetona: 'ona', alcohol: 'ol' }[fn] : '';
+  const sLocated = fn === 'cetona' || fn === 'alcohol'; // aldehído y ácido siempre en el extremo
+  const sLocs = fnLocs.join(',');
+  const uLocs = unsatLocs.join(',');
+  let core;
+  if (style === 'escolar') {
+    const uFront = unsat && !omit.u ? `${uLocs}-` : '';
+    const sFront = !unsat && fn && sLocated && !omit.s ? `${sLocs}-` : '';
+    const sMid = unsat && fn && sLocated && !omit.s ? `-${sLocs}-` : '';
+    if (unsat) {
+      core = `${uFront}${stem}${uMult > 1 ? `a${mw(uMult)}` : ''}${uk}${fn ? `${sMult > 1 ? 'o' : ''}${sMid}${mw(sMult)}${sWord}` : 'o'}`;
+    } else if (fn) {
+      core = `${sFront}${stem}an${sMult > 1 ? 'o' : ''}${mw(sMult)}${sWord}`;
+    } else {
+      core = `${stem}ano`;
+    }
+  } else {
+    const uMid = unsat && !omit.u ? `-${uLocs}-` : '';
+    const sMid = fn && sLocated && !omit.s ? `-${sLocs}-` : '';
+    if (unsat) {
+      core = `${stem}${uMult > 1 ? 'a' : ''}${uMid}${mw(uMult)}${uk}${fn ? `${sMult > 1 ? 'o' : ''}${sMid}${mw(sMult)}${sWord}` : 'o'}`;
+    } else if (fn) {
+      core = `${stem}an${sMult > 1 ? 'o' : ''}${sMid}${mw(sMult)}${sWord}`;
+    } else {
+      core = `${stem}ano`;
+    }
+  }
+  const lead = prefixes ? `${prefixes}${style === 'escolar' && /^\d/.test(core) ? '-' : ''}` : '';
+  return `${fn === 'acido' ? 'ácido ' : ''}${lead}${core}`;
+}
+
+/**
+ * ¿El texto se lee (parser + constructor) como EXACTAMENTE esta molécula?
+ * @param {string} text
+ * @param {Molecule} mol
+ */
+function readsBack(text, mol) {
+  const p = parse(text);
+  if (p.status !== 'valido' || !p.ast) return false;
+  const b = build(p.ast);
+  return b.status === 'valido' && b.molecule !== null && b.molecule.canonicalKey() === mol.canonicalKey();
+}
+
+/**
+ * Quita los localizadores que sobran SOLO si el nombre resultante sigue sin ambigüedad.
+ * @param {Molecule} mol
+ * @param {Model} m
+ * @param {'escolar' | 'iupac'} style
+ */
+function shortest(mol, m, style) {
+  const omit = { u: false, s: false };
+  const full = formatName(m, style, omit);
+  // con sustituyentes se conservan todos los localizadores (más claro para quien aprende)
+  if (m.subs.length > 0) return full;
+  if (m.fn && (m.fn === 'cetona' || m.fn === 'alcohol')) {
+    const t = formatName(m, style, { ...omit, s: true });
+    if (readsBack(t, mol)) omit.s = true;
+  }
+  if (m.unsat) {
+    const t = formatName(m, style, { ...omit, u: true });
+    if (readsBack(t, mol)) omit.u = true;
+  }
+  const out = formatName(m, style, omit);
+  return readsBack(out, mol) ? out : full;
 }
 
 /**
@@ -221,17 +412,48 @@ function whyNot(mol) {
   if (mol.atoms.length === 0) return 'La molécula está vacía.';
   if (mol.validate().length) return 'La estructura tiene errores químicos; corrígelos antes de nombrarla.';
   if (!mol.isTree()) return 'Las estructuras con ciclos todavía no se pueden nombrar.';
-  for (const a of mol.atoms) {
-    if (a.el !== 'C' && !HALOGENS.includes(a.el)) return `El elemento ${a.el} todavía no está soportado para nombrar.`;
-  }
-  if (mol.bonds.some((b) => b.order !== 1)) return 'Los enlaces dobles y triples todavía no se pueden nombrar.';
   if (!mol.atoms.some((a) => a.el === 'C')) return 'No hay carbonos.';
   for (const a of mol.atoms) {
-    if (HALOGENS.includes(a.el) && mol.neighbors(a.id).some((nb) => mol.element(nb.id) !== 'C')) {
+    if (a.el !== 'C' && a.el !== 'O' && !HALOGENS.includes(a.el)) return `El elemento ${a.el} todavía no está soportado para nombrar.`;
+    const nbs = mol.neighbors(a.id);
+    if (HALOGENS.includes(a.el) && nbs.some((nb) => mol.element(nb.id) !== 'C')) {
       return 'Un halógeno unido a otro halógeno no se puede nombrar todavía.';
+    }
+    if (a.el === 'O') {
+      if (nbs.length !== 1 || mol.element(nbs[0].id) !== 'C') {
+        return 'Los éteres y otras estructuras con oxígeno entre dos átomos todavía no se pueden nombrar.';
+      }
+    }
+    if (a.el === 'C' && oxygensOf(mol, a.id).oxo.length && mol.neighbors(a.id).some((nb) => HALOGENS.includes(mol.element(nb.id)))) {
+      return 'Los halogenuros de acilo todavía no se pueden nombrar.';
     }
   }
   return null;
+}
+
+/**
+ * Comparación de dos numeraciones/cadenas candidatas (menor = mejor).
+ * @param {Model} a
+ * @param {Model} b
+ */
+function compareModels(a, b) {
+  /** @param {number[]} x @param {number[]} y */
+  const cmp = (x, y) => {
+    for (let i = 0; i < Math.min(x.length, y.length); i++) if (x[i] !== y[i]) return x[i] - y[i];
+    return 0;
+  };
+  /** @param {number[]} x */
+  const sorted = (x) => [...x].sort((p, q) => p - q);
+  const steps = [
+    b.fnLocs.length - a.fnLocs.length, // más grupos principales
+    b.unsatLocs.length - a.unsatLocs.length, // más enlaces múltiples
+    b.n - a.n, // cadena más larga
+    b.subs.length - a.subs.length, // más sustituyentes
+    cmp(sorted(a.fnLocs), sorted(b.fnLocs)), // localizadores bajos: grupo principal
+    cmp(sorted(a.unsatLocs), sorted(b.unsatLocs)), // enlaces múltiples
+    compareSubs(a.subs, b.subs), // sustituyentes (conjunto y luego orden alfabético)
+  ];
+  return steps.find((x) => x !== 0) ?? 0;
 }
 
 /**
@@ -243,23 +465,56 @@ export function nameMolecule(mol) {
   const reason = whyNot(mol);
   if (reason) return { ok: false, reason };
   try {
+    const principal = principalOf(mol);
     const carbons = mol.atoms.filter((a) => a.el === 'C').map((a) => a.id);
     /** @type {number[][]} */
     const all = [];
     for (const c of carbons) all.push(...pathsFrom(mol, c, -1));
-    const best = pickBest(all.map((p) => ({ path: p, subs: subsOf(mol, p, -1) })));
-    const model = modelFor(mol, best.path);
+    /** @type {Model | null} */
+    let best = null;
+    /** @type {Unsupported | null} */
+    let firstError = null;
+    for (const p of all) {
+      let m;
+      try {
+        m = modelFor(mol, p, principal);
+      } catch (e) {
+        // una cadena candidata puede ser inviable (deja un enlace múltiple fuera); se descarta
+        if (e instanceof Inviable) {
+          firstError = firstError || e;
+          continue;
+        }
+        throw e;
+      }
+      if (best === null || compareModels(m, best) < 0) best = m;
+    }
+    if (best === null) throw firstError || new Unsupported('No encuentro una cadena principal que se pueda nombrar.');
+    const model = /** @type {Model} */ (best);
+    // todos los grupos principales deben caber en la cadena elegida
+    if (principal) {
+      let total = 0;
+      for (const c of carbons) {
+        if (fnOf(mol, c) === principal) total += principal === 'alcohol' ? oxygensOf(mol, c).oh.length : 1;
+      }
+      if (total !== model.fnLocs.length) {
+        throw new Unsupported('Hay grupos funcionales principales que no caben en una sola cadena: todavía no se pueden nombrar.');
+      }
+    }
+    // todos los enlaces múltiples también (los de fuera ya los detecta subsOf)
+    const systematic = shortest(mol, model, 'escolar');
+    const iupac2013 = shortest(mol, model, 'iupac');
 
-    // forma radicofuncional: solo cuando hay un único halógeno
+    // forma radicofuncional: solo halogenuros de alquilo con un único halógeno
     let radicofuncional = null;
     const halos = mol.atoms.filter((a) => HALOGENS.includes(a.el));
-    if (halos.length === 1) {
+    const onlyHalide = !mol.atoms.some((a) => a.el === 'O') && !mol.bonds.some((b) => b.order > 1);
+    if (halos.length === 1 && onlyHalide) {
       const h = halos[0].id;
       const c = mol.neighbors(h)[0].id;
       const r = radicalName(mol, c, h);
       radicofuncional = `${HALIDE_CANON[halos[0].el]} de ${r.text}o`;
     }
-    return { ok: true, systematic: model.name, radicofuncional, model, chain: best.path };
+    return { ok: true, systematic, iupac2013, radicofuncional, model, chain: model.path };
   } catch (e) {
     if (e instanceof Unsupported) return { ok: false, reason: e.message };
     throw e;
@@ -287,6 +542,20 @@ export function diagnose(ast, mol, typedChain) {
   const typed = modelFor(mol, typedChain);
   const correct = canon.systematic;
 
+  if (typed.fnLocs.length < canon.model.fnLocs.length) {
+    out.push({
+      type: 'cadena', correct,
+      message: `La cadena principal debe contener el grupo funcional principal (el de mayor prioridad: ácido > aldehído > cetona > alcohol). Nombre correcto: «${correct}».`,
+    });
+    return out;
+  }
+  if (typed.unsatLocs.length < canon.model.unsatLocs.length) {
+    out.push({
+      type: 'cadena', correct,
+      message: `La cadena principal debe contener el mayor número de enlaces dobles/triples. Nombre correcto: «${correct}».`,
+    });
+    return out;
+  }
   if (typed.n < canon.model.n) {
     out.push({
       type: 'cadena',
@@ -297,14 +566,16 @@ export function diagnose(ast, mol, typedChain) {
   }
   /** @param {Sub[]} s */
   const sig = (s) => s.map((x) => `${x.pos}:${x.text}`).sort().join('|');
-  if (sig(typed.subs) !== sig(canon.model.subs)) {
+  /** @param {Model} m */
+  const full = (m) => `${sig(m.subs)}#${m.fnLocs.join()}#${m.unsatLocs.join()}`;
+  if (full(typed) !== full(canon.model)) {
     const reversed = [...typedChain].reverse();
-    const sameChainReversed = sig(modelFor(mol, reversed).subs) === sig(canon.model.subs);
+    const sameChainReversed = full(modelFor(mol, reversed)) === full(canon.model);
     if (sameChainReversed) {
       out.push({
         type: 'numeracion',
         correct,
-        message: `La cadena se numera desde el extremo que da los localizadores más bajos al conjunto de sustituyentes. Numerada al revés, los localizadores serían ${canon.model.subs.map((s) => s.pos).sort((a, b) => a - b).join(',')}. Nombre correcto: «${correct}».`,
+        message: `La cadena se numera desde el extremo que da el localizador más bajo, por este orden: grupo principal, enlaces dobles/triples y por último sustituyentes. Numerada al revés resulta «${correct}».`,
       });
     } else {
       out.push({

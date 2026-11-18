@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { parse } from '../src/core/parser.js';
 import { build } from '../src/core/build.js';
 import { nameMolecule, diagnose } from '../src/core/namer.js';
+import { fromSmiles } from '../src/core/smiles.js';
 import { Molecule } from '../src/core/molecule.js';
 
 /** @param {string} name */
@@ -100,15 +101,20 @@ test('diagnóstico: numeración, cadena, orden alfabético y nombre correcto', (
 });
 
 test('moléculas fuera de alcance no reciben nombre inventado', () => {
+  // éter: C-O-C
   const m = new Molecule();
   const a = m.addAtom('C');
-  m.addBond(a, m.addAtom('O'));
-  const r = nameMolecule(m);
-  assert.equal(r.ok, false);
-  const dbl = new Molecule();
-  const x = dbl.addAtom('C');
-  dbl.addBond(x, dbl.addAtom('C'), 2);
-  assert.equal(nameMolecule(dbl).ok, false);
+  const o = m.addAtom('O');
+  m.addBond(a, o);
+  m.addBond(o, m.addAtom('C'));
+  assert.equal(nameMolecule(m).ok, false);
+  // amina: C-N
+  const am = new Molecule();
+  am.addBond(am.addAtom('C'), am.addAtom('N'));
+  assert.equal(nameMolecule(am).ok, false);
+  // eninos (doble y triple en la misma cadena): todavía no
+  const en = fromSmiles('C=CC#C');
+  assert.equal(nameMolecule(en).ok, false);
   // cadena de 11 carbonos
   const big = new Molecule();
   let prev = big.addAtom('C');

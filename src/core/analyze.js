@@ -28,7 +28,7 @@ import { explain } from './explain.js';
  *   molecule: Molecule | null,
  *   chain: number[],
  *   trace: import('./build.js').TraceItem[],
- *   names: { sistematico: string | null, radicofuncional: string | null } | null,
+ *   names: { sistematico: string | null, iupac2013: string | null, radicofuncional: string | null } | null,
  *   correcto: boolean,
  *   formula: string | null,
  *   semidesarrollada: string | null,
@@ -71,7 +71,7 @@ export function analyze(text) {
 
   if (canon.ok) {
     drawChain = canon.chain; // se dibuja con la numeración correcta (C1 a la izquierda)
-    names = { sistematico: canon.systematic, radicofuncional: canon.radicofuncional };
+    names = { sistematico: canon.systematic, iupac2013: canon.iupac2013, radicofuncional: canon.radicofuncional };
 
     const common = p.ast.form === 'sustitutivo' ? p.ast.common : undefined;
     if (common) {
@@ -86,6 +86,7 @@ export function analyze(text) {
     const typed = squash(text);
     correcto =
       typed === squash(canon.systematic) ||
+      typed === squash(canon.iupac2013) ||
       (canon.radicofuncional !== null && typed === squash(canon.radicofuncional));
 
     if (p.ast.form === 'radicofuncional') {
