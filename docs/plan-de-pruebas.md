@@ -30,17 +30,17 @@ Estado: ✅ implementado y ejecutado · ⏳ pendiente (prueba escrita como `todo
 
 | ID | Módulo | Objetivo | Casos | Oráculo | Estado |
 |---|---|---|---|---|---|
-| T0 | Regresión v0.1 | Nada de lo anterior se rompe | 40 pruebas existentes | pruebas previas | ⏳ |
-| T1 | `smiles.js`, `molecule.js` | Lector/escritor SMILES acíclico; valencias de O; órdenes de enlace en la clave canónica | ida y vuelta SMILES↔grafo; `C=C`≠`C-C`; `CC(=O)O` | grafo | ⏳ |
-| T2 | `parser.js` | Gramática de alquenos/alquinos/alcoholes/aldehídos/cetonas/ácidos en ambos estilos | ≥ 60 nombres válidos; prefijos incompletos para cada sufijo; fuera de alcance solo para tier 2 | estados | ⏳ |
-| T3 | `build.js` | Semántica de localizadores, multiplicadores, cetona terminal, rangos, valencias, ambigüedad con localizadores omitidos de enlace/sufijo | errores con mensaje específico; `butanona` ✓ / `pentanona` incompleto | grafo | ⏳ |
-| T4 | `namer.js` | Reglas de cadena, numeración, prefijos funcionales, omisión de localizadores, dienos, dioles, ácidos | ≥ 40 casos con nombre canónico esperado | tabla de oro | ⏳ |
-| T5 | Casos de oro | Nombre ↔ SMILES ↔ fórmula, con variantes de escritura | ≥ 90 compuestos; ≥ 200 nombres | declarada + Python + núcleo | ⏳ |
-| T6 | Propiedad | 3000 moléculas aleatorias con funciones: nombre → parser → mismo grafo; nombrar es idempotente | generador con semilla fija | propiedad | ⏳ |
-| T7 | Diagnósticos | Cada criterio de numeración/cadena tiene un mensaje propio | grupo principal, enlace múltiple, prefijos, alfabético, cadena | casos manuales | ⏳ |
-| T8 | `render.js` | Enlaces dobles/triples, etiquetas `OH`/`HO`, `CHO`, `COOH`, `CO`; sin solapamiento | texto semidesarrollado exacto + geometría | texto esperado | ⏳ |
-| T9 | UI | Estados visibles, ejemplos, resaltado cruzado, sin errores de consola | Chrome headless, volcado del DOM | DOM | ⏳ |
-| T10 | Éteres, ésteres, aminas, amidas | Cobertura de familias restantes | casos listados abajo | — | ⏳ (todo) |
+| T0 | Regresión v0.1 | Nada de lo anterior se rompe | 40 pruebas existentes | pruebas previas | ✅ |
+| T1 | `smiles.js`, `molecule.js` | Lector/escritor SMILES acíclico; valencias de O; órdenes de enlace en la clave canónica | ida y vuelta SMILES↔grafo; `C=C`≠`C-C`; `CC(=O)O` | grafo | ✅ |
+| T2 | `parser.js` | Gramática de alquenos/alquinos/alcoholes/aldehídos/cetonas/ácidos en ambos estilos | ≥ 60 nombres válidos; prefijos incompletos para cada sufijo; fuera de alcance solo para tier 2 | estados | ✅ |
+| T3 | `build.js` | Semántica de localizadores, multiplicadores, cetona terminal, rangos, valencias, ambigüedad con localizadores omitidos de enlace/sufijo | errores con mensaje específico; `butanona` ✓ / `pentanona` incompleto | grafo | ✅ |
+| T4 | `namer.js` | Reglas de cadena, numeración, prefijos funcionales, omisión de localizadores, dienos, dioles, ácidos | ≥ 40 casos con nombre canónico esperado | tabla de oro | ✅ |
+| T5 | Casos de oro | Nombre ↔ SMILES ↔ fórmula, con variantes de escritura | 85 compuestos; 159 nombres (meta original 90/200: **no alcanzada**, ver resultados) | declarada + Python + núcleo | ✅ |
+| T6 | Propiedad | 3000 moléculas aleatorias con funciones: nombre (escolar e IUPAC 2013) → parser → mismo grafo, fórmula y `correcto` | generador con semilla fija | propiedad | ✅ |
+| T7 | Diagnósticos | Cada criterio de numeración/cadena tiene un mensaje propio | grupo principal, enlace múltiple, prefijos, alfabético, cadena | casos manuales | ✅ |
+| T8 | `render.js` | Enlaces dobles/triples, etiquetas `OH`/`HO`, `CHO`, `COOH`, `CO`; sin solapamiento | texto semidesarrollado exacto + geometría | texto esperado | ✅ |
+| T9 | UI | Estados visibles, ejemplos, render con funciones | Chrome headless, volcado del DOM + captura (manual, no automatizado en `npm test`; consola no auditada) | DOM | 🟡 |
+| T10 | Éteres, ésteres, aminas, amidas | Cobertura de familias restantes | casos listados abajo | — | ✅ (`todo` explícito) |
 | T11 | Constructor visual / «verifica mi respuesta» | Edición ↔ modelo ↔ nombre | — | — | 🔲 |
 
 ### Casos reservados para T10 (escritos como `todo`)

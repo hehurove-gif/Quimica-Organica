@@ -121,7 +121,8 @@ function update() {
   const row = (k, v) => {
     dl.append(el('dt', '', k), el('dd', '', v));
   };
-  if (a.names?.sistematico) row('Nombre sistemático', a.names.sistematico);
+  if (a.names?.sistematico) row('Nombre sistemático (escolar)', a.names.sistematico);
+  if (a.names?.iupac2013 && a.names.iupac2013 !== a.names.sistematico) row('Nombre IUPAC 2013', a.names.iupac2013);
   if (a.names?.radicofuncional) row('Forma radicofuncional', a.names.radicofuncional);
   row('Fórmula molecular', a.formula || '');
   row('Tu nombre', a.correcto ? '✓ correcto' : '⚠ se entiende, pero revisa las observaciones');
