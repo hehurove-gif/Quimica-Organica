@@ -39,3 +39,10 @@ Principio: **leer de forma generosa, escribir de forma estricta.** El parser ace
 - Estilo de localizador para insaturaciones (`2-buteno` vs `but-2-eno`) y alcoholes (`1-propanol` vs `propan-1-ol`): se decide al implementar esas familias.
 - Éteres: `metoxietano` vs `etil metil éter`.
 - Aminas: `propilamina` vs `propan-1-amina`.
+
+## Cadenas largas (v0.2)
+
+- Raíces de 1 a 99 carbonos: `undec`, `dodec`, … `nonadec`, `eicos` (también se lee `icos`), `heneicos`, `docos`, `tricos`, … `triacont`, `hentriacont`… Al escribir se usa la forma tradicional (`eicosano`).
+- Multiplicadores hasta 20 (`undeca`… `icosa`).
+- Ambigüedad: `tridecil` es un radical de 13 carbonos, no «tri + decil» (3 × decilo se escribiría `tri(decil)`). Gana la lectura como raíz.
+- Botón «Comprimir CH₂ → (CH₂)ₙ»: afecta solo a la línea semidesarrollada (no al dibujo en zigzag ni al modelo). Una tira de 5 o más CH₂ interiores se escribe `CH₂–(CH₂)ₖ–CH₂` dejando uno a cada lado, p. ej. `Br–CH₂–CH(CH₃)–CH₂–(CH₂)₅–CH₂–CH₃`. Tiras más cortas no se comprimen.

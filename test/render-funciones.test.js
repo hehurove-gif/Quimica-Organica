@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { analyze } from '../src/core/analyze.js';
-import { renderSvg } from '../src/core/render.js';
+import { renderSvg, semidesarrollada } from '../src/core/render.js';
 
 /** @type {[string, string][]} */
 const SEMI = [
@@ -43,4 +43,20 @@ test('trazabilidad: función y enlace múltiple se enlazan con su parte del nomb
   for (const t of a.trace) assert.ok(t.span && t.span.to > t.span.from, t.label);
   assert.ok(a.steps.some((s) => /Enlace doble/.test(s.title)));
   assert.ok(a.steps.some((s) => /alcohol/.test(s.text)));
+});
+
+test('comprimir CH₂: (CH₂)ₙ dejando un CH₂ a cada lado', () => {
+  const a = analyze('1-bromo-2-metildecano');
+  const mol = /** @type {any} */ (a.molecule);
+  assert.equal(semidesarrollada(mol, a.chain), 'Br–CH₂–CH(CH₃)–CH₂–CH₂–CH₂–CH₂–CH₂–CH₂–CH₂–CH₃');
+  // C3…C9 son siete CH₂: CH₂–(CH₂)₅–CH₂ (el ejemplo pedido)
+  assert.equal(semidesarrollada(mol, a.chain, { compress: true }), 'Br–CH₂–CH(CH₃)–CH₂–(CH₂)₅–CH₂–CH₃');
+  // tiras cortas no se tocan; el modelo no cambia
+  const b = analyze('hexano');
+  assert.equal(semidesarrollada(/** @type {any} */ (b.molecule), b.chain, { compress: true }), 'CH₃–CH₂–CH₂–CH₂–CH₂–CH₃');
+  const c = analyze('octano');
+  assert.equal(semidesarrollada(/** @type {any} */ (c.molecule), c.chain, { compress: true }), 'CH₃–CH₂–(CH₂)₄–CH₂–CH₃');
+  // un doble enlace corta la tira
+  const d = analyze('1-eicoseno');
+  assert.match(semidesarrollada(/** @type {any} */ (d.molecule), d.chain, { compress: true }), /^CH₂=CH–CH₂–\(CH₂\)₁₅–CH₂–CH₃$/);
 });

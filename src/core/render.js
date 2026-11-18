@@ -75,16 +75,21 @@ function branchText(mol, id, parent) {
  * Fórmula semidesarrollada en una línea, siguiendo la cadena dada.
  * @param {Molecule} mol
  * @param {number[]} chain
+ * @param {{ compress?: boolean }} [opts] compress: escribe las tiras largas de CH₂ como (CH₂)ₙ
+ *   dejando un CH₂ a cada lado: CH₂–(CH₂)₅–CH₂
  * @returns {string}
  */
-export function semidesarrollada(mol, chain) {
+export function semidesarrollada(mol, chain, opts = {}) {
   const n = chain.length;
   /** @param {number} a @param {number} b */
   const joint = (a, b) => {
     const o = mol.neighbors(a).find((x) => x.id === b)?.order ?? 1;
     return o === 3 ? '≡' : o === 2 ? '=' : '–';
   };
-  let out = '';
+  /** @type {string[]} */
+  const parts = [];
+  /** @type {boolean[]} */
+  const plain = [];
   chain.forEach((id, i) => {
     const prev = chain[i - 1];
     const next = chain[i + 1];
@@ -93,18 +98,35 @@ export function semidesarrollada(mol, chain) {
     const halos = others.filter((x) => HALOGENS.includes(mol.element(x)));
     const isEnd = n > 1 && (i === 0 || i === n - 1);
     const where = n === 1 ? 'end' : i === 0 ? 'start' : i === n - 1 ? 'end' : 'inner';
-    let part;
+    // CH₂ "puro": interior, sin sustituyentes y con enlaces sencillos a ambos lados
+    plain[i] =
+      i > 0 && i < n - 1 && others.length === 0 && mol.implicitH(id) === 2 &&
+      joint(prev, id) === '–' && joint(id, next) === '–';
     // extremo con un único halógeno: se escribe como grupo aparte: Br–CH₂–… / …–CH₂–Br
     if (isEnd && carbonBranches.length === 0 && halos.length === 1 && others.length === 1) {
       const x = mol.element(halos[0]);
       const c = carbonText(mol, id, halos);
-      part = i === 0 ? `${x}–${c}` : `${c}–${x}`;
+      parts[i] = i === 0 ? `${x}–${c}` : `${c}–${x}`;
     } else {
       const base = carbonText(mol, id, carbonBranches, where);
-      part = base + carbonBranches.map((b) => `(${branchText(mol, b, id)})`).join('');
+      parts[i] = base + carbonBranches.map((b) => `(${branchText(mol, b, id)})`).join('');
     }
-    out += (i ? joint(chain[i - 1], id) : '') + part;
   });
+  let out = '';
+  for (let i = 0; i < n; i++) {
+    if (opts.compress && plain[i]) {
+      let j = i;
+      while (j + 1 < n && plain[j + 1]) j++;
+      const run = j - i + 1;
+      if (run >= 5) {
+        // CH₂–(CH₂)ₖ–CH₂, con k = run − 2
+        out += `${i ? '–' : ''}${parts[i]}–(${parts[i + 1]})${sub(run - 2)}–${parts[j]}`;
+        i = j;
+        continue;
+      }
+    }
+    out += (i ? joint(chain[i - 1], chain[i]) : '') + parts[i];
+  }
   return out;
 }
 

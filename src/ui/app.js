@@ -1,10 +1,11 @@
 // @ts-check
 import { analyze } from '../core/analyze.js';
-import { renderSvg } from '../core/render.js';
+import { renderSvg, semidesarrollada } from '../core/render.js';
 
 const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
 const input = /** @type {HTMLInputElement} */ ($('nombre'));
 const locChk = /** @type {HTMLInputElement} */ ($('loc'));
+const compChk = /** @type {HTMLInputElement} */ ($('comp'));
 
 /** @type {import('../core/analyze.js').Analysis | null} */
 let current = null;
@@ -22,6 +23,12 @@ function el(tag, cls, text) {
   if (cls) e.className = cls;
   if (text !== undefined) e.textContent = text;
   return e;
+}
+
+/** Fórmula semidesarrollada en una línea, comprimida o no según el botón. */
+function renderSemi() {
+  if (!current || !current.molecule) return;
+  $('semi').textContent = semidesarrollada(current.molecule, current.chain, { compress: compChk.checked });
 }
 
 /** Quita los resaltados. */
@@ -113,7 +120,7 @@ function update() {
   }
   $('resultado').hidden = false;
   renderDrawing();
-  $('semi').textContent = a.semidesarrollada || '';
+  renderSemi();
 
   const dl = $('nombres');
   dl.replaceChildren();
@@ -153,6 +160,7 @@ function update() {
 
 input.addEventListener('input', update);
 locChk.addEventListener('change', renderDrawing);
+compChk.addEventListener('change', renderSemi);
 document.querySelectorAll('[data-ej]').forEach((b) =>
   b.addEventListener('click', () => {
     input.value = /** @type {string} */ (b.getAttribute('data-ej'));
