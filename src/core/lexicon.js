@@ -111,17 +111,34 @@ export const COMMON_RADICALS = /** @type {{ names: string[], canon: string, syst
 ]);
 
 /**
- * Alcanos / compuestos con nombre común que el sistema reconoce y traduce al sistemático.
- * `chain` + `groups` describen la estructura: [{ locants, el|methyl }]
+ * Compuestos con nombre común: se definen por su nombre SISTEMÁTICO (que se lee con la
+ * misma gramática), así no se duplican estructuras.
  */
-export const COMMON_COMPOUNDS = /** @type {{ names: string[], systematic: string, chain: number, groups: { locants: number[], methyl?: boolean, el?: string }[] }[]} */ ([
-  { names: ['isobutano'], systematic: '2-metilpropano', chain: 3, groups: [{ locants: [2], methyl: true }] },
-  { names: ['isopentano'], systematic: '2-metilbutano', chain: 4, groups: [{ locants: [2], methyl: true }] },
-  { names: ['neopentano'], systematic: '2,2-dimetilpropano', chain: 3, groups: [{ locants: [2, 2], methyl: true }] },
-  { names: ['cloroformo'], systematic: 'triclorometano', chain: 1, groups: [{ locants: [1, 1, 1], el: 'Cl' }] },
-  { names: ['bromoformo'], systematic: 'tribromometano', chain: 1, groups: [{ locants: [1, 1, 1], el: 'Br' }] },
-  { names: ['yodoformo'], systematic: 'triyodometano', chain: 1, groups: [{ locants: [1, 1, 1], el: 'I' }] },
-  { names: ['tetracloruro de carbono'], systematic: 'tetraclorometano', chain: 1, groups: [{ locants: [1, 1, 1, 1], el: 'Cl' }] },
+export const COMMON_COMPOUNDS = /** @type {{ names: string[], systematic: string }[]} */ ([
+  { names: ['isobutano'], systematic: '2-metilpropano' },
+  { names: ['isopentano'], systematic: '2-metilbutano' },
+  { names: ['neopentano'], systematic: '2,2-dimetilpropano' },
+  { names: ['cloroformo'], systematic: 'triclorometano' },
+  { names: ['bromoformo'], systematic: 'tribromometano' },
+  { names: ['yodoformo'], systematic: 'triyodometano' },
+  { names: ['tetracloruro de carbono'], systematic: 'tetraclorometano' },
+  { names: ['etileno'], systematic: 'eteno' },
+  { names: ['acetileno'], systematic: 'etino' },
+  { names: ['propileno'], systematic: 'propeno' },
+  { names: ['alcohol metilico'], systematic: 'metanol' },
+  { names: ['alcohol etilico'], systematic: 'etanol' },
+  { names: ['alcohol propilico'], systematic: '1-propanol' },
+  { names: ['alcohol isopropilico'], systematic: '2-propanol' },
+  { names: ['alcohol butilico'], systematic: '1-butanol' },
+  { names: ['etilenglicol', 'glicol'], systematic: '1,2-etanodiol' },
+  { names: ['glicerina', 'glicerol'], systematic: '1,2,3-propanotriol' },
+  { names: ['formaldehido', 'aldehido formico'], systematic: 'metanal' },
+  { names: ['acetaldehido', 'aldehido acetico'], systematic: 'etanal' },
+  { names: ['acetona'], systematic: 'propanona' },
+  { names: ['acido formico'], systematic: 'acido metanoico' },
+  { names: ['acido acetico'], systematic: 'acido etanoico' },
+  { names: ['acido propionico'], systematic: 'acido propanoico' },
+  { names: ['acido butirico'], systematic: 'acido butanoico' },
 ]);
 
 /**
@@ -131,11 +148,8 @@ export const COMMON_COMPOUNDS = /** @type {{ names: string[], systematic: string
 export const FUERA_DE_ALCANCE = /** @type {[RegExp, string][]} */ ([
   [/ciclo/, 'ciclos (ciclo…)'],
   [/benc?eno|benzo|fenil|fenol|tolueno/, 'compuestos aromáticos'],
-  [/(?:met|et|prop|but|pent|hex|hept|oct|non|dec)(?:en|in)(?:o|il|ilo)?(?![a-z])|dieno|trieno|vinil|alil|etinil/, 'alquenos y alquinos (dobles y triples enlaces)'],
-  [/(?:an|en|in)(?:di|tri)?ol(?![a-z])|hidroxi/, 'alcoholes (-ol)'],
-  [/anal(?![a-z])|formil|oxo(?![a-z])/, 'aldehídos (-al)'],
-  [/anona(?![a-z])|cetona|acetona/, 'cetonas (-ona)'],
-  [/oico|carboxi|acido|oato(?![a-z])|ester/, 'ácidos carboxílicos y ésteres'],
+  [/vinil|alil|etinil|propargil/, 'sustituyentes con enlaces múltiples (vinil, alil…)'],
+  [/oato(?![a-z])|[a-z]ato de |ester|carboxi|formil/, 'ésteres y otros derivados de ácidos'],
   [/amina|amino|amida/, 'aminas y amidas'],
   [/eter|metoxi|etoxi|propoxi|butoxi/, 'éteres'],
   [/nitro|sulfo|tio/, 'otros grupos funcionales'],

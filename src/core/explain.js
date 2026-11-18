@@ -101,6 +101,16 @@ export function explain(ast, built, mol, canon) {
         atomIds: t.atomIds,
         spans,
       });
+    } else if (g.sub.kind === 'func') {
+      const oxo = g.sub.fg === 'oxo';
+      steps.push({
+        title: `Sustituyente «${g.sub.text}»`,
+        text: oxo
+          ? `Un oxígeno con doble enlace (=O) se une ${where}, en lugar de dos hidrógenos.`
+          : `Un grupo hidroxilo (–OH) se une ${where}, en lugar de un hidrógeno.`,
+        atomIds: t.atomIds,
+        spans,
+      });
     } else {
       const sub = g.sub;
       const r = sub.radical;

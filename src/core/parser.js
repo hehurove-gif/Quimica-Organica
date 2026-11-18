@@ -1,15 +1,18 @@
 // @ts-check
 /**
- * Parser de nomenclatura sistemática en español (v0.1: alcanos, alquilos, halogenuros).
+ * Parser de nomenclatura sistemática en español.
+ * v0.2: alcanos, alquenos, alquinos, alcoholes, aldehídos, cetonas, ácidos carboxílicos,
+ *       radicales alquilo y halogenuros.
  *
  * Acepta varias formas de escribir el mismo compuesto:
- *   - Sustitutiva:     "1-bromo-2-metilpropano", "5-fluoro-1-yodo-2-metilhexano", "bromoetano"
- *   - Radicofuncional: "bromuro de etilo", "bromuro de isobutilo", "cloruro de 2-metilpropilo"
- *   - Nombres comunes: "isobutano", "neopentano", "cloroformo"
+ *   - Sustitutiva, estilo escolar:  "1-bromo-2-metilpropano", "2-buteno", "4-penten-2-ol", "1,3-butadieno"
+ *   - Sustitutiva, estilo IUPAC 2013: "but-2-eno", "propan-2-ol", "pent-4-en-2-ol", "propano-1,2-diol"
+ *   - Radicofuncional:  "bromuro de etilo", "bromuro de isobutilo"
+ *   - Nombres comunes:  "isobutano", "acetona", "ácido acético", "alcohol etílico"
  *   - Variantes de ortografía y orden: "fluor", "iodo", "2-metil-1-bromopropano", espacios, "n-hexano"
  *
- * Solo hace análisis SINTÁCTICO. La química (posiciones, valencias, ambigüedad)
- * se resuelve en build.js. Nunca inventa una estructura.
+ * Solo hace análisis SINTÁCTICO (los localizadores se asignan en build.js).
+ * Nunca inventa una estructura.
  */
 import {
   Ctx, alts, choice, eof, integer, lit, many, opt, seq, ws,
@@ -22,15 +25,21 @@ import {
  * @typedef {{ from: number, to: number }} Span
  * @typedef {{ n: number, groups: Group[] }} Radical
  * @typedef {{ kind: 'halo', el: string, text: string, canon: string }
+ *   | { kind: 'func', fg: 'hidroxi' | 'oxo', text: string }
  *   | { kind: 'radical', radical: Radical, text: string, common?: string }} Sub
  * @typedef {{
  *   locants: number[] | null, mult: number | null, sub: Sub,
  *   span: Span | null, locSpan: Span | null, multSpan: Span | null, subSpan: Span | null,
  *   trailHyphen: boolean
  * }} Group
+ * @typedef {{ kind: 'en' | 'in', mult: number, locants: number[] | null, span: Span | null }} Unsat
+ * @typedef {{ kind: 'ol' | 'ona' | 'al' | 'oico', mult: number, locants: number[] | null, span: Span | null }} Suffix
+ * @typedef {{ values: number[], span: Span }} FrontLocs
  * @typedef {{ type: string, message: string, from: number, to: number }} Note
  * @typedef {{
  *   form: 'sustitutivo', groups: Group[], parent: { n: number, span: Span | null },
+ *   unsat: Unsat | null, suffix: Suffix | null, front: FrontLocs | null,
+ *   acid: { span: Span | null } | null,
  *   common?: { name: string, systematic: string }
  * } | {
  *   form: 'radicofuncional', halide: { el: string, text: string, span: Span },
@@ -61,7 +70,12 @@ const stemN = /** @type {Record<string, number>} */ (Object.fromEntries(STEMS));
 const multP = alts(MULTS.map(([m]) => m), 'un multiplicador (di, tri, tetra…)');
 const multN = /** @type {Record<string, number>} */ (Object.fromEntries(MULTS));
 const haloP = alts(Object.keys(HALO_PREFIXES), 'un halógeno (fluoro, cloro, bromo, yodo)');
-const locsP = seq(integer('un localizador (número)'), many(seq(ws, lit(','), ws, integer('un localizador (número)'))));
+const funcP = alts(['hidroxi', 'oxo'], 'un grupo (hidroxi, oxo)');
+const locNum = integer('un localizador (número)');
+const locsP = seq(locNum, many(seq(ws, lit(','), ws, locNum)));
+
+/** @param {any[]} v @returns {number[]} */
+const locValues = (v) => [v[0], ...v[1].map((/** @type {any[]} */ x) => x[3])];
 
 /** @param {string} text @returns {Sub} */
 function methylSub(text = 'metil') {
@@ -129,7 +143,7 @@ function stemRadicalP(withO) {
   return (ctx, pos) => {
     const r = inner(ctx, pos);
     if (!r) return null;
-    const [, stem, end] = r.value;
+    const stem = r.value[1];
     /** @type {Sub} */
     const sub = {
       kind: 'radical',
@@ -137,7 +151,6 @@ function stemRadicalP(withO) {
       text: ctx.input.slice(pos, r.pos),
       common: undefined,
     };
-    void end;
     return { pos: r.pos, value: sub };
   };
 }
@@ -201,7 +214,7 @@ const parenSubP = (ctx, pos) => {
   return { pos: close.pos, value: sub };
 };
 
-/** Sustituyente: halógeno, radical común, paréntesis o radical lineal. @type {import('./peg.js').P} */
+/** Sustituyente: halógeno, hidroxi/oxo, radical común, paréntesis o radical lineal. @type {import('./peg.js').P} */
 const subP = (ctx, pos) => {
   const h = haloP(ctx, pos);
   if (h) {
@@ -210,8 +223,28 @@ const subP = (ctx, pos) => {
     const sub = { kind: 'halo', el: info.el, text: h.value, canon: info.canon };
     return { pos: h.pos, value: sub };
   }
+  const f = funcP(ctx, pos);
+  if (f) {
+    /** @type {Sub} */
+    const sub = { kind: 'func', fg: /** @type {'hidroxi' | 'oxo'} */ (f.value), text: f.value };
+    return { pos: f.pos, value: sub };
+  }
   return choice(commonRadicalP(false), parenSubP, stemRadicalP(false))(ctx, pos);
 };
+
+/**
+ * Localizadores seguidos de separador: "2-", "2,3-", "2 ".
+ * @param {Ctx} ctx @param {number} pos
+ * @returns {{ values: number[], span: Span, pos: number } | null}
+ */
+function locsWithSep(ctx, pos) {
+  const l = locsP(ctx, pos);
+  if (!l) return null;
+  let p = ws(ctx, l.pos).pos;
+  if (ctx.input[p] === '-') p++;
+  p = ws(ctx, p).pos;
+  return { values: locValues(l.value), span: { from: pos, to: l.pos }, pos: p };
+}
 
 /**
  * Grupo: [localizadores][-][multiplicador]sustituyente[-]
@@ -223,13 +256,11 @@ function groupP(ctx, pos) {
   let locants = null;
   /** @type {Span | null} */
   let locSpan = null;
-  const l = locsP(ctx, pos);
+  const l = locsWithSep(ctx, pos);
   if (l) {
-    locants = [l.value[0], ...l.value[1].map((/** @type {any[]} */ x) => x[3])];
-    locSpan = { from: pos, to: l.pos };
-    pos = ws(ctx, l.pos).pos;
-    if (ctx.input[pos] === '-') pos++;
-    pos = ws(ctx, pos).pos;
+    locants = l.values;
+    locSpan = l.span;
+    pos = l.pos;
   }
   /** @type {number | null} */
   let mult = null;
@@ -260,22 +291,140 @@ function groupP(ctx, pos) {
   return { pos, value: g };
 }
 
-/** Cadena principal: [n-]raíz+"ano". @type {import('./peg.js').P} */
-const parentP = (ctx, pos) => {
-  const r = seq(opt(lit('n-')), stemP, lit('ano', 'la terminación -ano'))(ctx, pos);
-  if (!r) return null;
-  return { pos: r.pos, value: { n: stemN[r.value[1]], span: { from: pos, to: r.pos } } };
+/* ------------------------- núcleo: cadena + enlaces múltiples + sufijo ------------------------- */
+
+/** "-2-" o "-1,3-" entre partes del nombre (estilo IUPAC 2013). @type {import('./peg.js').P} */
+const midLocsP = (ctx, pos) => {
+  let p = ws(ctx, pos).pos;
+  const a = lit('-')(ctx, p);
+  if (!a) return null;
+  p = ws(ctx, a.pos).pos;
+  const l = locsP(ctx, p);
+  if (!l) return null;
+  p = ws(ctx, l.pos).pos;
+  const b = lit('-', 'un guion «-» después de los localizadores')(ctx, p);
+  if (!b) return null;
+  return { pos: ws(ctx, b.pos).pos, value: { values: locValues(l.value), span: { from: pos, to: b.pos } } };
+};
+
+const suffixWordP = alts(['oico', 'ona', 'ol', 'al'], 'un sufijo (-ol, -al, -ona, -oico)');
+const endingEnInP = alts(['en', 'in'], 'la terminación -en / -in');
+
+/**
+ * Parte tras el tallo: terminación (an/en/in) con multiplicador opcional.
+ * @param {Ctx} ctx @param {number} pos
+ * @returns {{ pos: number, kind: 'an' | 'en' | 'in', mult: number, mid: FrontLocs | null } | null}
+ */
+function endingP(ctx, pos) {
+  // A) buta-1,3-dieno / butadieno   (a + [localizadores] + multiplicador + en|in)
+  const a = lit('a')(ctx, pos);
+  if (a) {
+    const mid = opt(midLocsP)(ctx, a.pos);
+    const m = multP(ctx, mid.pos);
+    if (m) {
+      const e = endingEnInP(ctx, m.pos);
+      if (e) {
+        return { pos: e.pos, kind: /** @type {'en' | 'in'} */ (e.value), mult: multN[m.value], mid: mid.value };
+      }
+    }
+  }
+  // B) but-2-eno / buteno / 2-buteno
+  const mid = opt(midLocsP)(ctx, pos);
+  const e = endingEnInP(ctx, mid.pos);
+  if (e) return { pos: e.pos, kind: /** @type {'en' | 'in'} */ (e.value), mult: 1, mid: mid.value };
+  // C) alcano
+  const an = lit('an', 'la terminación -an / -en / -in')(ctx, pos);
+  if (an) return { pos: an.pos, kind: 'an', mult: 1, mid: null };
+  return null;
+}
+
+/**
+ * Sufijo opcional tras la terminación, con "o" de enlace ("propanodiol") y localizadores
+ * intermedios ("propan-2-ol").
+ * @param {Ctx} ctx @param {number} pos
+ * @returns {{ pos: number, kind: 'ol' | 'ona' | 'al' | 'oico', mult: number, mid: FrontLocs | null } | null}
+ */
+function suffixP(ctx, pos) {
+  for (const link of [false, true]) {
+    let p = pos;
+    if (link) {
+      const o = lit('o')(ctx, p);
+      if (!o) continue;
+      p = o.pos;
+    }
+    const mid = opt(midLocsP)(ctx, p);
+    const m = multP(ctx, mid.pos);
+    const w = suffixWordP(ctx, m ? m.pos : mid.pos);
+    if (w) {
+      return {
+        pos: w.pos, kind: /** @type {'ol' | 'ona' | 'al' | 'oico'} */ (w.value),
+        mult: m ? multN[m.value] : 1, mid: mid.value,
+      };
+    }
+  }
+  return null;
+}
+
+/** Núcleo del nombre. @type {import('./peg.js').P} */
+const coreP = (ctx, pos) => {
+  /** @type {FrontLocs | null} */
+  let front = null;
+  const l = locsWithSep(ctx, pos);
+  if (l) {
+    front = { values: l.values, span: l.span };
+    pos = l.pos;
+  }
+  const nn = lit('n-')(ctx, pos);
+  if (nn) pos = nn.pos;
+  const st = stemP(ctx, pos);
+  if (!st) return null;
+  const stemSpan = { from: pos, to: st.pos };
+  const e = endingP(ctx, st.pos);
+  if (!e) return null;
+  const sfx = suffixP(ctx, e.pos);
+  let end;
+  if (sfx) {
+    end = sfx.pos;
+  } else {
+    const o = lit('o', 'la terminación -o (-ano, -eno, -ino) o un sufijo (-ol, -al, -ona, -oico)')(ctx, e.pos);
+    if (!o) return null;
+    end = o.pos;
+  }
+  /** @type {Unsat | null} */
+  const unsat = e.kind === 'an'
+    ? null
+    : { kind: e.kind, mult: e.mult, locants: e.mid ? e.mid.values : null, span: { from: st.pos, to: e.pos } };
+  /** @type {Suffix | null} */
+  const suffix = sfx
+    ? { kind: sfx.kind, mult: sfx.mult, locants: sfx.mid ? sfx.mid.values : null, span: { from: e.pos, to: sfx.pos } }
+    : null;
+  // el span de «cadena»: solo el tallo si hay enlace múltiple; con «ano» (y su «o» final) si es alcano
+  const parentEnd = unsat ? stemSpan.to : sfx ? e.pos : end;
+  return {
+    pos: end,
+    value: { n: stemN[st.value], parentSpan: { from: stemSpan.from, to: parentEnd }, unsat, suffix, front },
+  };
 };
 
 /** @type {import('./peg.js').P} */
 const sustitutivoP = (ctx, pos) => {
+  /** @type {{ span: Span | null } | null} */
+  let acid = null;
+  const ac = lit('acido')(ctx, pos);
+  if (ac) {
+    acid = { span: { from: pos, to: ac.pos } };
+    pos = ws(ctx, ac.pos).pos;
+  }
   const g = many(groupP)(ctx, pos);
-  if (!g) return null;
-  const p = parentP(ctx, g.pos);
-  if (!p) return null;
+  const c = coreP(ctx, g.pos);
+  if (!c) return null;
   /** @type {Ast} */
-  const ast = { form: 'sustitutivo', groups: g.value, parent: p.value };
-  return { pos: p.pos, value: ast };
+  const ast = {
+    form: 'sustitutivo', groups: g.value,
+    parent: { n: c.value.n, span: c.value.parentSpan },
+    unsat: c.value.unsat, suffix: c.value.suffix, front: c.value.front, acid,
+  };
+  return { pos: c.pos, value: ast };
 };
 
 /** Forma radicofuncional: "bromuro de etilo". @type {import('./peg.js').P} */
@@ -298,26 +447,36 @@ const radicofuncionalP = (ctx, pos) => {
   return { pos: rad.pos, value: ast };
 };
 
-/** Nombres comunes de compuestos: "isobutano", "cloroformo". @type {import('./peg.js').P} */
+/**
+ * Quita las posiciones del texto (el AST viene de OTRO texto: el nombre sistemático interno).
+ * @param {any} node
+ * @returns {any}
+ */
+function stripSpans(node) {
+  if (Array.isArray(node)) return node.map(stripSpans);
+  if (node && typeof node === 'object') {
+    /** @type {any} */
+    const out = {};
+    for (const [k, v] of Object.entries(node)) {
+      out[k] = /span$/i.test(k) ? null : stripSpans(v);
+    }
+    return out;
+  }
+  return node;
+}
+
+/** Nombres comunes de compuestos: "isobutano", "acetona". @type {import('./peg.js').P} */
 const commonCompoundP = (ctx, pos) => {
   /** @type {Map<string, typeof COMMON_COMPOUNDS[number]>} */
   const map = new Map();
   for (const c of COMMON_COMPOUNDS) for (const nm of c.names) map.set(nm, c);
-  const r = alts([...map.keys()], 'un nombre común (isobutano, cloroformo…)')(ctx, pos);
+  const r = alts([...map.keys()], 'un nombre común (acetona, isobutano, cloroformo…)')(ctx, pos);
   if (!r) return null;
   const c = /** @type {typeof COMMON_COMPOUNDS[number]} */ (map.get(r.value));
-  /** @type {Group[]} */
-  const groups = c.groups.map((g) => {
-    const sub = g.el
-      ? /** @type {Sub} */ ({ kind: 'halo', el: g.el, text: '', canon: '' })
-      : methylSub();
-    return synthGroup(g.locants, sub);
-  });
+  const inner = parse(c.systematic);
+  if (!inner.ast || inner.ast.form !== 'sustitutivo') return null;
   /** @type {Ast} */
-  const ast = {
-    form: 'sustitutivo', groups, parent: { n: c.chain, span: null },
-    common: { name: r.value, systematic: c.systematic },
-  };
+  const ast = { ...stripSpans(inner.ast), common: { name: r.value, systematic: c.systematic } };
   return { pos: r.pos, value: ast };
 };
 
@@ -405,7 +564,15 @@ function collectNotes(ast) {
       }
     });
   };
-  if (ast.form === 'sustitutivo') visit(ast.groups, true);
-  else visit(ast.radical.groups, false);
+  if (ast.form === 'sustitutivo') {
+    visit(ast.groups, true);
+    if (ast.suffix?.kind === 'oico' && !ast.acid && !ast.common) {
+      notes.push({
+        type: 'forma',
+        message: 'Los ácidos carboxílicos llevan la palabra «ácido» antes del nombre (p. ej. «ácido butanoico»).',
+        from: 0, to: 0,
+      });
+    }
+  } else visit(ast.radical.groups, false);
   return notes;
 }
