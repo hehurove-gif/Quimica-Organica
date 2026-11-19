@@ -60,3 +60,21 @@ test('comprimir CH₂: (CH₂)ₙ dejando un CH₂ a cada lado', () => {
   const d = analyze('1-eicoseno');
   assert.match(semidesarrollada(/** @type {any} */ (d.molecule), d.chain, { compress: true }), /^CH₂=CH–CH₂–\(CH₂\)₁₅–CH₂–CH₃$/);
 });
+
+test('SVG comprimido: la tira de CH₂ se dibuja como un solo nodo (CH₂)ₖ', () => {
+  const a = analyze('5-fluoro-2-metil-1-yodotriacontano');
+  assert.equal(a.status, 'valido', a.errors[0]?.message);
+  const mol = /** @type {any} */ (a.molecule);
+  const normal = renderSvg(mol, a.chain, { locants: true });
+  const comp = renderSvg(mol, a.chain, { locants: true, compress: true });
+  assert.ok(comp.length < normal.length);
+  assert.match(comp, />\(CH</); // etiqueta (CH₂)ₖ
+  assert.match(comp, />7–28</); // el nodo central agrupa C7…C28
+  assert.match(comp, /font-size="14.4">22</); // k = 22 CH₂ en el nodo
+  // el modelo no cambia: el dibujo normal sigue teniendo los 30 carbonos
+  assert.equal((normal.match(/data-atom=/g) || []).length, mol.atoms.length);
+  // misma molécula, sin tiras: sin cambios
+  const hex = analyze('hexano');
+  const h = /** @type {any} */ (hex.molecule);
+  assert.equal(renderSvg(h, hex.chain, { compress: true }), renderSvg(h, hex.chain, {}));
+});

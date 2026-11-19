@@ -81,7 +81,7 @@ function renderLeido(/** @type {string} */ text, /** @type {import('../core/anal
 function renderDrawing() {
   const a = current;
   if (!a || !a.molecule) return;
-  $('svg').innerHTML = renderSvg(a.molecule, a.chain, { locants: locChk.checked });
+  $('svg').innerHTML = renderSvg(a.molecule, a.chain, { locants: locChk.checked, compress: compChk.checked });
   $('svg').querySelectorAll('[data-atom]').forEach((g) => {
     const id = Number(g.getAttribute('data-atom'));
     g.addEventListener('mouseenter', () => {
@@ -160,7 +160,10 @@ function update() {
 
 input.addEventListener('input', update);
 locChk.addEventListener('change', renderDrawing);
-compChk.addEventListener('change', renderSemi);
+compChk.addEventListener('change', () => {
+  renderDrawing();
+  renderSemi();
+});
 document.querySelectorAll('[data-ej]').forEach((b) =>
   b.addEventListener('click', () => {
     input.value = /** @type {string} */ (b.getAttribute('data-ej'));
@@ -168,5 +171,7 @@ document.querySelectorAll('[data-ej]').forEach((b) =>
     update();
   }),
 );
-input.value = new URLSearchParams(location.search).get('q') ?? '5-fluoro-2-metil-1-yodohexano';
+const params = new URLSearchParams(location.search);
+input.value = params.get('q') ?? '5-fluoro-2-metil-1-yodohexano';
+compChk.checked = params.get('comp') === '1';
 update();
