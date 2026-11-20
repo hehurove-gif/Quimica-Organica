@@ -9,7 +9,7 @@
  * - Soporta enlaces múltiples (-eno, -ino), alcoholes, aldehídos, cetonas y ácidos.
  * - v0.3: aminas (-amina, amino), amidas (-amida), ésteres (-oato de …ilo), éteres (alcoxi) y las
  *   formas radicofuncionales «etilmetilamina» / «etil metil éter». El localizador «N» (nitrógeno)
- *   se representa con la posición 0.
+ *   se representa con la posición -1.
  * - Registra la trazabilidad parte del nombre -> átomos (para el resaltado cruzado).
  */
 import { Molecule } from './molecule.js';
@@ -53,7 +53,7 @@ const MAX_COMBOS = 20000;
 /** Funciones que ocupan el carbono terminal (C1 o Cn) de la cadena principal. */
 const TERMINAL = ['al', 'oico', 'amida', 'oato'];
 /** Posición que representa al nitrógeno («N-metil») en los localizadores. */
-const N_POS = 0;
+const N_POS = -1;
 
 /**
  * @param {Ast} ast
@@ -175,7 +175,7 @@ function positionsOf(it) {
     return { positions: null, errors };
   }
   const k = it.locants.length;
-  const locs = it.locants.join(',');
+  const locs = it.locants.map((x) => (x === N_POS ? 'N' : x)).join(',');
   if (mult === null && k > 1) {
     errors.push({
       code: 'multiplicador',

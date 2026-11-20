@@ -73,7 +73,7 @@ test('T10 build: sin localizador se pide, y la opción N se muestra como «N» (
     const b = build(p.ast);
     assert.equal(b.status, 'incompleto', nombre);
     assert.equal(b.molecule, null, `${nombre}: no debe adivinar`);
-    assert.ok(!/\(0 \/|\/ 0[ )]/.test(b.errors[0].message), `${nombre}: filtra la posición interna 0: ${b.errors[0].message}`);
+    assert.ok(!/-1/.test(b.errors[0].message), `${nombre}: filtra la posición interna: ${b.errors[0].message}`);
   }
   const msg = build(/** @type {any} */ (parse('metiletanamina').ast)).errors[0].message;
   assert.match(msg, /N/);
@@ -101,8 +101,10 @@ test('T10 build: errores químicos con mensaje claro', () => {
 
 test('T10 build: «0» escrito como localizador no se confunde con N', () => {
   const p = parse('0-metiletanamina');
-  assert.notEqual(p.status, 'valido');
-  assert.equal(p.ast, null);
+  assert.ok(p.ast);
+  const b = build(p.ast);
+  assert.notEqual(b.status, 'valido');
+  assert.equal(b.molecule, null);
 });
 
 test('T10 build: la trazabilidad cubre función, N-sustituyente y cola del éster', () => {
