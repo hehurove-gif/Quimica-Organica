@@ -81,7 +81,16 @@ const multP = alts(MULTS.map(([m]) => m), 'un multiplicador (di, tri, tetra…)'
 const multN = /** @type {Record<string, number>} */ (Object.fromEntries(MULTS));
 const haloP = alts(Object.keys(HALO_PREFIXES), 'un halógeno (fluoro, cloro, bromo, yodo)');
 const funcP = alts(['hidroxi', 'oxo', 'amino'], 'un grupo (hidroxi, oxo, amino)');
-const locNum = integer('un localizador (número)');
+const locInt = integer('un localizador (número)');
+/** Localizador numérico: entero positivo (el 0 se reserva internamente para «N»). @type {import('./peg.js').P} */
+const locNum = (ctx, pos) => {
+  const r = locInt(ctx, pos);
+  if (r && r.value === 0) {
+    ctx.fail(pos, 'un localizador mayor que 0');
+    return null;
+  }
+  return r;
+};
 /** «N» (nitrógeno) como localizador: vale 0. @type {import('./peg.js').P} */
 const nLoc = (ctx, pos) => {
   const r = lit('@', 'el localizador N (nitrógeno)')(ctx, pos);
