@@ -6,7 +6,8 @@
  * - Si faltan localizadores, prueba TODAS las posiciones posibles: si todas dan la misma
  *   molécula (p. ej. "bromoetano", "butanona") se acepta; si dan moléculas distintas
  *   (p. ej. "bromopropano", "butanol") NO se adivina: el estado es "incompleto".
- * - Soporta enlaces múltiples (-eno, -ino), alcoholes, aldehídos, cetonas y ácidos.
+ * - Soporta enlaces múltiples (-eno, -ino), alcoholes, aldehídos, cetonas, ácidos, éteres,
+ *   ésteres, aminas y amidas (también sus formas radicofuncionales: «etilmetilamina»).
  * - Registra la trazabilidad parte del nombre -> átomos (para el resaltado cruzado).
  */
 import { Molecule } from './molecule.js';
@@ -18,14 +19,15 @@ import { stemOf } from './lexicon.js';
  * @typedef {import('./parser.js').Radical} Radical
  * @typedef {import('./parser.js').Sub} Sub
  * @typedef {import('./parser.js').Span} Span
+ * @typedef {import('./parser.js').EsterTail} EsterTail
  * @typedef {{ code: string, message: string, from?: number, to?: number }} BuildError
  * @typedef {{ type: string, message: string }} BuildNote
  * @typedef {{
- *   role: 'cadena' | 'grupo' | 'halogenuro' | 'insaturacion' | 'funcion',
+ *   role: 'cadena' | 'grupo' | 'halogenuro' | 'insaturacion' | 'funcion' | 'alquilo',
  *   label: string, span: Span | null, atomIds: number[], groupIndex?: number
  * }} TraceItem
  * @typedef {{
- *   status: 'valido' | 'invalido' | 'incompleto',
+ *   status: 'valido' | 'invalido' | 'incompleto' | 'fuera_de_alcance',
  *   molecule: Molecule | null, chain: number[],
  *   trace: TraceItem[], errors: BuildError[], notes: BuildNote[]
  * }} BuildResult
@@ -39,6 +41,7 @@ import { stemOf } from './lexicon.js';
  *   attach: { pos: number, el: string, text: string, span: Span }[],
  *   unsat: import('./parser.js').Unsat | null, unsatLocs: number[] | null,
  *   suffix: import('./parser.js').Suffix | null, suffixLocs: number[] | null,
+ *   ester: EsterTail | null,
  *   label: string, chainSpan: Span | null
  * }} Spec
  */
@@ -50,6 +53,7 @@ const MAX_COMBOS = 20000;
  * @returns {BuildResult}
  */
 export function build(ast) {
+  if (ast.form === 'radicoamina' || ast.form === 'radicoeter') return buildRadicoHetero(ast);
   if (ast.form === 'sustitutivo') {
     const stem = stemOf(ast.parent.n);
     /** @type {BuildError[]} */
@@ -83,14 +87,13 @@ export function build(ast) {
       });
     }
     if (errors.length) return { status: 'invalido', molecule: null, chain: [], trace: [], errors, notes: [] };
-    const suffixName = ast.suffix ? { ol: 'ol', ona: 'ona', al: 'al', oico: 'oico' }[ast.suffix.kind] : '';
     return buildStructure({
       n: ast.parent.n,
       groups: ast.groups,
       attach: [],
       unsat: ast.unsat, unsatLocs,
-      suffix: ast.suffix, suffixLocs,
-      label: ast.unsat ? `${stem}${ast.unsat.kind === 'en' ? 'eno' : 'ino'}` : ast.suffix ? `${stem}an${suffixName ? '' : ''}o`.replace('o', 'o') : `${stem}ano`,
+      suffix: ast.suffix, suffixLocs, ester: ast.ester,
+      label: ast.unsat ? `${stem}${ast.unsat.kind === 'en' ? 'eno' : 'ino'}` : `${stem}ano`,
       chainSpan: ast.parent.span,
     });
   }
@@ -98,7 +101,7 @@ export function build(ast) {
     n: ast.radical.n,
     groups: ast.radical.groups,
     attach: [{ pos: 1, el: ast.halide.el, text: ast.halide.text, span: ast.halide.span }],
-    unsat: null, unsatLocs: null, suffix: null, suffixLocs: null,
+    unsat: null, unsatLocs: null, suffix: null, suffixLocs: null, ester: null,
     label: 'el radical',
     chainSpan: ast.radicalSpan,
   });
@@ -119,7 +122,7 @@ function positionsOf(it) {
     return { positions: null, errors };
   }
   const k = it.locants.length;
-  const locs = it.locants.join(',');
+  const locs = fmtLocs(it.locants);
   if (mult === null && k > 1) {
     errors.push({
       code: 'multiplicador',
@@ -165,16 +168,25 @@ function checkNested(r, errors) {
 /** @param {number} n @returns {number[]} */
 const range = (n) => Array.from({ length: n }, (_, i) => i + 1);
 
+/** Localizadores para mostrar: el 0 es el nitrógeno («N»). @param {number[]} locs */
+const fmtLocs = (locs) => locs.map((x) => (x === 0 ? 'N' : String(x))).join(',');
+
+/** Grupos principales que van siempre en un extremo de la cadena. */
+const TERMINAL = ['al', 'oico', 'amida', 'oato'];
+
 /**
  * @param {Group} g @param {number} n @param {string} label
  * @param {number} [gi]
+ * @param {boolean} [allowN] el nitrógeno (localizador «N») es una posición válida
  * @returns {Item}
  */
-function groupItem(g, n, label, gi) {
+function groupItem(g, n, label, gi, allowN = false) {
   return {
     kind: 'group', label: g.sub.text || 'este sustituyente', span: g.span,
-    locants: g.locants, mult: g.mult, domain: range(n), groupIndex: gi,
-    outMsg: (loc) => `El localizador ${loc} no existe: ${label} tiene ${n} carbono${n === 1 ? '' : 's'} (del 1 al ${n}).`,
+    locants: g.locants, mult: g.mult, domain: allowN ? [0, ...range(n)] : range(n), groupIndex: gi,
+    outMsg: (loc) => (loc === 0
+      ? 'El localizador N (nitrógeno) solo existe en una amina o una amida con un único grupo «-amina» / «-amida».'
+      : `El localizador ${loc} no existe: ${label} tiene ${n} carbono${n === 1 ? '' : 's'} (del 1 al ${n}).`),
   };
 }
 
@@ -195,9 +207,16 @@ function attachSub(mol, carbon, sub) {
     return created;
   }
   if (sub.kind === 'func') {
-    const id = mol.addAtom('O');
+    const id = mol.addAtom(sub.fg === 'amino' ? 'N' : 'O');
     mol.addBond(carbon, id, sub.fg === 'oxo' ? 2 : 1);
     created.push(id);
+    return created;
+  }
+  if (sub.kind === 'alkoxy') {
+    // –O–R: el radical cuelga del oxígeno
+    const o = mol.addAtom('O');
+    mol.addBond(carbon, o);
+    created.push(o, ...attachSub(mol, o, { kind: 'radical', radical: sub.radical, text: sub.text, common: sub.common }));
     return created;
   }
   const r = sub.radical;
@@ -240,6 +259,10 @@ function assemble(spec, items, positions) {
     mol.addBond(chain[a.pos - 1], id);
     trace.push({ role: 'halogenuro', label: a.text, span: a.span, atomIds: [id] });
   }
+  /** Sustituyentes en el nitrógeno: se unen cuando el sufijo ya creó su N. @type {{ g: Group, atomIds: number[] }[]} */
+  const deferredN = [];
+  /** @type {number | null} */
+  let nAtom = null;
   for (let k = 0; k < items.length; k++) {
     const it = items[k];
     const pos = positions[k] || [];
@@ -263,9 +286,26 @@ function assemble(spec, items, positions) {
         atoms.push(c);
         if (kind === 'ol') {
           atoms.push(...attachSub(mol, c, { kind: 'func', fg: 'hidroxi', text: 'ol' }));
+        } else if (kind === 'amina') {
+          const made = attachSub(mol, c, { kind: 'func', fg: 'amino', text: 'amina' });
+          nAtom = made[0];
+          atoms.push(...made);
         } else {
           atoms.push(...attachSub(mol, c, { kind: 'func', fg: 'oxo', text: 'o' }));
-          if (kind === 'oico') atoms.push(...attachSub(mol, c, { kind: 'func', fg: 'hidroxi', text: 'ol' }));
+          if (kind === 'oico') {
+            atoms.push(...attachSub(mol, c, { kind: 'func', fg: 'hidroxi', text: 'ol' }));
+          } else if (kind === 'amida') {
+            const made = attachSub(mol, c, { kind: 'func', fg: 'amino', text: 'amida' });
+            nAtom = made[0];
+            atoms.push(...made);
+          } else if (kind === 'oato' && spec.ester) {
+            // éster: C(=O)–O–R, con R como radical unido al oxígeno
+            const o = mol.addAtom('O');
+            mol.addBond(c, o);
+            atoms.push(o);
+            const alkyl = attachSub(mol, o, { kind: 'radical', radical: spec.ester.radical, text: spec.ester.text, common: spec.ester.common });
+            trace.push({ role: 'alquilo', label: spec.ester.text, span: spec.ester.span, atomIds: alkyl });
+          }
         }
       }
       trace.push({ role: 'funcion', label: kind, span: spec.suffix.span, atomIds: [...new Set(atoms)] });
@@ -273,9 +313,16 @@ function assemble(spec, items, positions) {
       const g = spec.groups[/** @type {number} */ (it.groupIndex)];
       /** @type {number[]} */
       const atomIds = [];
-      for (const p of pos) atomIds.push(...attachSub(mol, chain[p - 1], g.sub));
+      for (const p of pos) {
+        if (p === 0) deferredN.push({ g, atomIds });
+        else atomIds.push(...attachSub(mol, chain[p - 1], g.sub));
+      }
       trace.push({ role: 'grupo', label: g.sub.text, span: g.span, atomIds, groupIndex: it.groupIndex });
     }
+  }
+  for (const d of deferredN) {
+    if (nAtom === null) return null;
+    d.atomIds.push(...attachSub(mol, nAtom, d.g.sub));
   }
   return { mol, chain, trace };
 }
@@ -311,8 +358,10 @@ function valenceErrors(mol, chain) {
  */
 function itemsOf(spec) {
   const { n, groups, label } = spec;
+  // el nitrógeno es una posición válida solo con un único -amina / -amida
+  const allowN = !!spec.suffix && ['amina', 'amida'].includes(spec.suffix.kind) && spec.suffix.mult === 1;
   /** @type {Item[]} */
-  const items = groups.map((g, gi) => groupItem(g, n, label, gi));
+  const items = groups.map((g, gi) => groupItem(g, n, label, gi, allowN));
   if (spec.unsat) {
     const u = spec.unsat;
     const word = u.kind === 'en' ? 'doble' : 'triple';
@@ -325,9 +374,9 @@ function itemsOf(spec) {
   if (spec.suffix) {
     const s = spec.suffix;
     const mult = s.mult > 1 ? s.mult : null;
-    if (s.kind === 'ol') {
+    if (s.kind === 'ol' || s.kind === 'amina') {
       items.push({
-        kind: 'suffix', label: 'ol', span: s.span, locants: spec.suffixLocs, mult, domain: range(n),
+        kind: 'suffix', label: s.kind, span: s.span, locants: spec.suffixLocs, mult, domain: range(n),
         outMsg: (loc) => `El localizador ${loc} no existe: la cadena tiene ${n} carbono${n === 1 ? '' : 's'}.`,
       });
     } else if (s.kind === 'ona') {
@@ -339,7 +388,7 @@ function itemsOf(spec) {
           : `El localizador ${loc} no existe: la cadena tiene ${n} carbonos.`),
       });
     } else {
-      // aldehído / ácido: siempre en los extremos
+      // aldehído / ácido / amida / éster: siempre en los extremos
       const ends = n === 1 || mult === null ? [1] : [1, n];
       items.push({
         kind: 'suffix', label: s.kind, span: s.span, locants: spec.suffixLocs, mult,
@@ -364,7 +413,17 @@ function buildStructure(spec) {
   const notes = [];
   const items = itemsOf(spec);
 
-  if (spec.suffix && ['al', 'oico'].includes(spec.suffix.kind)) {
+  if (spec.suffix?.kind === 'oato' && spec.suffix.mult > 1) {
+    return {
+      status: 'fuera_de_alcance', molecule: null, chain: [], trace: [], notes,
+      errors: [{
+        code: 'fuera_de_alcance',
+        message: 'Los diésteres y poliésteres (dos o más grupos -oato) todavía no están soportados. Un éster con un solo grupo sí: «etanoato de metilo».',
+        ...(spec.suffix.span || {}),
+      }],
+    };
+  }
+  if (spec.suffix && TERMINAL.includes(spec.suffix.kind)) {
     const m = spec.suffix.mult;
     if (m > 2) errors.push({ code: 'multiplicador', message: `Una cadena solo tiene dos extremos: «${spec.suffix.kind}» no puede repetirse ${m} veces.`, ...(spec.suffix.span || {}) });
     else if (m === 2 && n === 1) errors.push({ code: 'multiplicador', message: 'Con un solo carbono no caben dos grupos terminales.', ...(spec.suffix.span || {}) });
@@ -375,7 +434,7 @@ function buildStructure(spec) {
 
   /** @type {(number[] | null)[]} */
   const fixed = items.map((it) => {
-    if (it.kind === 'suffix' && spec.suffix && ['al', 'oico'].includes(spec.suffix.kind) && !it.locants) {
+    if (it.kind === 'suffix' && spec.suffix && TERMINAL.includes(spec.suffix.kind) && !it.locants) {
       return spec.suffix.mult === 2 && n > 1 ? [1, n] : [1];
     }
     const r = it.domain.length === 0 ? { positions: [], errors: [{ code: 'localizador_fuera', message: `Con ${n} carbono${n === 1 ? '' : 's'} no hay dónde colocar «${it.label}».`, ...(it.span || {}) }] } : positionsOf(it);
@@ -387,7 +446,7 @@ function buildStructure(spec) {
     return r.positions;
   });
   // aldehído/ácido con localizadores escritos: deben ser los extremos
-  if (spec.suffix && ['al', 'oico'].includes(spec.suffix.kind) && spec.suffixLocs) {
+  if (spec.suffix && TERMINAL.includes(spec.suffix.kind) && spec.suffixLocs) {
     const want = spec.suffix.mult === 2 && n > 1 ? [1, n] : [1];
     if (spec.suffixLocs.join() !== want.join()) {
       errors.push({
@@ -431,7 +490,7 @@ function buildStructure(spec) {
   if (byKey.size > 1) {
     const ui = unknown[0];
     const it = items[ui];
-    const options = [...new Set([...byKey.values()].map((p) => (p[ui] || []).join(',')))];
+    const options = [...new Set([...byKey.values()].map((p) => fmtLocs(p[ui] || [])))];
     return {
       status: 'incompleto', molecule: null, chain: [], trace: [], notes,
       errors: [{
@@ -464,6 +523,70 @@ function buildStructure(spec) {
     const ambiguous = errs.some((e) => e.code === 'localizador_ambiguo');
     return { status: ambiguous ? 'incompleto' : 'invalido', molecule: null, chain: [], trace: [], errors: errs, notes };
   }
+}
+
+/**
+ * Cadena de carbonos más larga de la molécula (para dibujarla cuando no hay otra elegida).
+ * @param {Molecule} mol
+ * @returns {number[]}
+ */
+function longestCarbonPath(mol) {
+  /** @type {number[]} */
+  let best = [];
+  /** @param {number} id */
+  const carbons = (id) => mol.neighbors(id).filter((x) => mol.element(x.id) === 'C').map((x) => x.id);
+  /** @param {number[]} path */
+  const walk = (path) => {
+    const nexts = carbons(path[path.length - 1]).filter((x) => !path.includes(x));
+    if (nexts.length === 0) {
+      if (path.length > best.length) best = [...path];
+      return;
+    }
+    for (const x of nexts) walk([...path, x]);
+  };
+  for (const a of mol.atoms) if (a.el === 'C') walk([a.id]);
+  return best;
+}
+
+/**
+ * Amina o éter en forma radicofuncional: un nitrógeno (u oxígeno) con sus radicales,
+ * «etilmetilamina», «dimetilamina», «etil metil éter».
+ * @param {Extract<Ast, { form: 'radicoamina' | 'radicoeter' }>} ast
+ * @returns {BuildResult}
+ */
+function buildRadicoHetero(ast) {
+  const isAmine = ast.form === 'radicoamina';
+  const span = ast.form === 'radicoamina' ? ast.aminaSpan : ast.eterSpan;
+  const total = ast.radicals.reduce((s, r) => s + r.mult, 0);
+  /** @type {BuildError[]} */
+  const errors = [];
+  if (isAmine && total > 3) {
+    errors.push({ code: 'valencia', message: `El nitrógeno de una amina admite como máximo 3 radicales y escribiste ${total}.`, from: span.from, to: span.to });
+  }
+  if (!isAmine && total !== 2) {
+    errors.push({
+      code: 'multiplicador', from: span.from, to: span.to,
+      message: `Un éter es R–O–R′: lleva exactamente dos radicales (p. ej. «etil metil éter», «dietil éter») y escribiste ${total}.`,
+    });
+  }
+  for (const t of ast.radicals) checkNested(t.radical, errors);
+  if (errors.length) return { status: 'invalido', molecule: null, chain: [], trace: [], errors, notes: [] };
+
+  const mol = new Molecule();
+  const hetero = mol.addAtom(isAmine ? 'N' : 'O');
+  /** @type {TraceItem[]} */
+  const trace = [{ role: 'funcion', label: isAmine ? 'amina' : 'éter', span, atomIds: [hetero] }];
+  for (const t of ast.radicals) {
+    /** @type {Sub} */
+    const sub = { kind: 'radical', radical: t.radical, text: t.text, common: t.common };
+    /** @type {number[]} */
+    const atomIds = [];
+    for (let k = 0; k < t.mult; k++) atomIds.push(...attachSub(mol, hetero, sub));
+    trace.push({ role: 'alquilo', label: t.text, span: t.span, atomIds });
+  }
+  const issues = valenceErrors(mol, []);
+  if (issues.length) return { status: 'invalido', molecule: null, chain: [], trace: [], errors: issues, notes: [] };
+  return { status: 'valido', molecule: mol, chain: longestCarbonPath(mol), trace, errors: [], notes: [] };
 }
 
 /** Multiconjuntos de tamaño k con elementos del dominio (orden no decreciente). @param {number[]} domain @param {number} k @returns {number[][]} */
