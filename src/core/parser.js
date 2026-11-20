@@ -1,13 +1,14 @@
 // @ts-check
 /**
  * Parser de nomenclatura sistemática en español.
- * v0.2: alcanos, alquenos, alquinos, alcoholes, aldehídos, cetonas, ácidos carboxílicos,
- *       radicales alquilo y halogenuros.
+ * v0.3: alcanos, alquenos, alquinos, alcoholes, aldehídos, cetonas, ácidos carboxílicos,
+ *       éteres, ésteres, aminas, amidas, radicales alquilo y halogenuros.
  *
  * Acepta varias formas de escribir el mismo compuesto:
  *   - Sustitutiva, estilo escolar:  "1-bromo-2-metilpropano", "2-buteno", "4-penten-2-ol", "1,3-butadieno"
  *   - Sustitutiva, estilo IUPAC 2013: "but-2-eno", "propan-2-ol", "pent-4-en-2-ol", "propano-1,2-diol"
- *   - Radicofuncional:  "bromuro de etilo", "bromuro de isobutilo"
+ *   - Radicofuncional:  "bromuro de etilo", "bromuro de isobutilo", "etilmetilamina", "etil metil éter"
+ *   - Ésteres: "etanoato de metilo";  amidas: "N-metiletanamida";  éteres: "metoxietano"
  *   - Nombres comunes:  "isobutano", "acetona", "ácido acético", "alcohol etílico"
  *   - Variantes de ortografía y orden: "fluor", "iodo", "2-metil-1-bromopropano", espacios, "n-hexano"
  *
@@ -25,25 +26,32 @@ import {
  * @typedef {{ from: number, to: number }} Span
  * @typedef {{ n: number, groups: Group[] }} Radical
  * @typedef {{ kind: 'halo', el: string, text: string, canon: string }
- *   | { kind: 'func', fg: 'hidroxi' | 'oxo', text: string }
- *   | { kind: 'radical', radical: Radical, text: string, common?: string }} Sub
+ *   | { kind: 'func', fg: 'hidroxi' | 'oxo' | 'amino', text: string }
+ *   | { kind: 'radical', radical: Radical, text: string, common?: string }
+ *   | { kind: 'alkoxy', radical: Radical, text: string, common?: string }} Sub
  * @typedef {{
  *   locants: number[] | null, mult: number | null, sub: Sub,
  *   span: Span | null, locSpan: Span | null, multSpan: Span | null, subSpan: Span | null,
  *   trailHyphen: boolean
  * }} Group
  * @typedef {{ kind: 'en' | 'in', mult: number, locants: number[] | null, span: Span | null }} Unsat
- * @typedef {{ kind: 'ol' | 'ona' | 'al' | 'oico', mult: number, locants: number[] | null, span: Span | null }} Suffix
+ * @typedef {{ kind: 'ol' | 'ona' | 'al' | 'oico' | 'amina' | 'amida' | 'oato', mult: number, locants: number[] | null, span: Span | null }} Suffix
+ * @typedef {{ radical: Radical, text: string, common?: string, span: Span | null }} EsterTail
+ * @typedef {{ radical: Radical, mult: number, text: string, common?: string, span: Span | null }} RadicalTerm
  * @typedef {{ values: number[], span: Span }} FrontLocs
  * @typedef {{ type: string, message: string, from: number, to: number }} Note
  * @typedef {{
  *   form: 'sustitutivo', groups: Group[], parent: { n: number, span: Span | null },
  *   unsat: Unsat | null, suffix: Suffix | null, front: FrontLocs | null,
- *   acid: { span: Span | null } | null,
+ *   acid: { span: Span | null } | null, ester: EsterTail | null,
  *   common?: { name: string, systematic: string }
  * } | {
  *   form: 'radicofuncional', halide: { el: string, text: string, span: Span },
  *   radical: Radical, radicalSpan: Span
+ * } | {
+ *   form: 'radicoamina', radicals: RadicalTerm[], aminaSpan: Span
+ * } | {
+ *   form: 'radicoeter', radicals: RadicalTerm[], eterSpan: Span
  * }} Ast
  * @typedef {{
  *   status: 'valido' | 'incompleto' | 'invalido' | 'fuera_de_alcance' | 'vacio',
@@ -60,6 +68,8 @@ const ACCENTS = /** @type {Record<string, string>} */ ({
 /** Minúsculas y sin acentos, carácter por carácter (los índices se conservan). @param {string} s */
 export function normalize(s) {
   return s
+    // «N» mayúscula como localizador del nitrógeno (N-metil, N,N-dimetil, 2,N-dimetil): se marca con «@»
+    .replace(/(^|[^A-Za-zÁ-ÿ])N(?=\s*[-,])/g, '$1@')
     .toLowerCase()
     .replace(/[áéíóúüñ]/g, (c) => ACCENTS[c])
     .replace(/[–—−]/g, '-');
@@ -70,9 +80,18 @@ const stemN = /** @type {Record<string, number>} */ (Object.fromEntries(STEMS_RE
 const multP = alts(MULTS.map(([m]) => m), 'un multiplicador (di, tri, tetra…)');
 const multN = /** @type {Record<string, number>} */ (Object.fromEntries(MULTS));
 const haloP = alts(Object.keys(HALO_PREFIXES), 'un halógeno (fluoro, cloro, bromo, yodo)');
-const funcP = alts(['hidroxi', 'oxo'], 'un grupo (hidroxi, oxo)');
+const funcP = alts(['hidroxi', 'oxo', 'amino'], 'un grupo (hidroxi, oxo, amino)');
 const locNum = integer('un localizador (número)');
-const locsP = seq(locNum, many(seq(ws, lit(','), ws, locNum)));
+/** «N» (nitrógeno) como localizador: vale 0. @type {import('./peg.js').P} */
+const nLoc = (ctx, pos) => {
+  const r = lit('@', 'el localizador N (nitrógeno)')(ctx, pos);
+  return r ? { pos: r.pos, value: 0 } : null;
+};
+const locAny = choice(locNum, nLoc);
+/** @param {import('./peg.js').P} item @returns {import('./peg.js').P} */
+const locList = (item) => seq(item, many(seq(ws, lit(','), ws, item)));
+const locsP = locList(locNum);
+const locsAnyP = locList(locAny);
 
 /** @param {any[]} v @returns {number[]} */
 const locValues = (v) => [v[0], ...v[1].map((/** @type {any[]} */ x) => x[3])];
@@ -108,20 +127,26 @@ function commonToRadical(c) {
 }
 
 /**
- * Radical con nombre común. withO: acepta terminación "-ilo" (forma radicofuncional).
- * @param {boolean} withO
+ * Terminación del radical: «il» (sustituyente), «ilo» (radicofuncional: «bromuro de etilo»,
+ * «etanoato de metilo») u «oxi» (alcoxi: «metoxi», «isopropoxi»).
+ * @typedef {'il' | 'ilo' | 'oxi'} RadMode
+ */
+
+/**
+ * Radical con nombre común.
+ * @param {RadMode} mode
  * @returns {import('./peg.js').P}
  */
-function commonRadicalP(withO) {
+function commonRadicalP(mode) {
   /** @type {Map<string, typeof COMMON_RADICALS[number]>} */
   const map = new Map();
   for (const c of COMMON_RADICALS) {
     for (const nm of c.names) {
-      map.set(nm, c);
-      if (withO) map.set(`${nm}o`, c);
+      map.set(mode === 'oxi' ? nm.replace(/il$/, 'oxi') : nm, c);
+      if (mode === 'ilo') map.set(`${nm}o`, c);
     }
   }
-  const p = alts([...map.keys()], 'un radical (isopropil, isobutil, sec-butil, terc-butil…)');
+  const p = alts([...map.keys()], mode === 'oxi' ? 'un alcoxi (isopropoxi, isobutoxi, terc-butoxi…)' : 'un radical (isopropil, isobutil, sec-butil, terc-butil…)');
   return (ctx, pos) => {
     const r = p(ctx, pos);
     if (!r) return null;
@@ -133,12 +158,14 @@ function commonRadicalP(withO) {
 }
 
 /**
- * Radical lineal: [n-] raíz + "il" (o "ilo").
- * @param {boolean} withO
+ * Radical lineal: [n-] raíz + "il" (o "ilo", o "oxi").
+ * @param {RadMode} mode
  * @returns {import('./peg.js').P}
  */
-function stemRadicalP(withO) {
-  const ending = withO ? alts(['ilo', 'il'], 'la terminación -il / -ilo') : lit('il', 'la terminación -il');
+function stemRadicalP(mode) {
+  const ending = mode === 'ilo'
+    ? alts(['ilo', 'il'], 'la terminación -il / -ilo')
+    : mode === 'oxi' ? lit('oxi', 'la terminación -oxi') : lit('il', 'la terminación -il');
   const inner = seq(opt(lit('n-')), stemP, ending);
   return (ctx, pos) => {
     const r = inner(ctx, pos);
@@ -159,12 +186,12 @@ function stemRadicalP(withO) {
  * Radical completo con sustituyentes propios: "2-metilpropil".
  * `terminator` indica dónde termina el radical (fin del texto o «)»); sirve para decidir
  * si lo que sigue es el núcleo final del radical o todavía otro sustituyente.
- * @param {boolean} withO
+ * @param {RadMode} mode
  * @param {import('./peg.js').P} terminator
  * @returns {import('./peg.js').P}
  */
-function radicalWithGroupsP(withO, terminator) {
-  const core = choice(commonRadicalP(withO), stemRadicalP(withO));
+function radicalWithGroupsP(mode, terminator) {
+  const core = choice(commonRadicalP(mode), stemRadicalP(mode));
   return (ctx, pos) => {
     /** @type {Group[]} */
     const groups = [];
@@ -196,25 +223,38 @@ const atEnd = (ctx, pos) => (pos === ctx.input.length ? { pos, value: null } : n
 /** Cierre de paréntesis (lookahead). @type {import('./peg.js').P} */
 const atClose = (ctx, pos) => (ctx.input[pos] === ')' ? { pos, value: null } : null);
 
-/** Sustituyente entre paréntesis: "(2-metilpropil)". @type {import('./peg.js').P} */
-const parenSubP = (ctx, pos) => {
+/**
+ * Sustituyente entre paréntesis: "(2-metilpropil)" o "(2-metilpropoxi)".
+ * @param {RadMode} mode
+ * @returns {import('./peg.js').P}
+ */
+const parenP = (mode) => (ctx, pos) => {
   const open = lit('(')(ctx, pos);
   if (!open) return null;
   let p = ws(ctx, open.pos).pos;
-  const inner = radicalWithGroupsP(false, atClose)(ctx, p);
+  const inner = radicalWithGroupsP(mode, atClose)(ctx, p);
   if (!inner) return null;
   p = ws(ctx, inner.pos).pos;
   const close = lit(')', 'el paréntesis de cierre «)»')(ctx, p);
   if (!close) return null;
   /** @type {Sub} */
   const sub = {
-    kind: 'radical', radical: inner.value.radical, common: inner.value.common,
+    kind: mode === 'oxi' ? 'alkoxy' : 'radical', radical: inner.value.radical, common: inner.value.common,
     text: ctx.input.slice(pos, close.pos),
   };
   return { pos: close.pos, value: sub };
 };
 
-/** Sustituyente: halógeno, hidroxi/oxo, radical común, paréntesis o radical lineal. @type {import('./peg.js').P} */
+/** Un radical leído en modo «oxi» pasa a ser un alcoxi. @param {import('./peg.js').Ok | null} r */
+function asAlkoxy(r) {
+  if (!r) return null;
+  const v = r.value;
+  /** @type {Sub} */
+  const sub = { kind: 'alkoxy', radical: v.radical, text: v.text, common: v.common };
+  return { pos: r.pos, value: sub };
+}
+
+/** Sustituyente: halógeno, hidroxi/oxo/amino, alcoxi, radical común, paréntesis o radical lineal. @type {import('./peg.js').P} */
 const subP = (ctx, pos) => {
   const h = haloP(ctx, pos);
   if (h) {
@@ -226,19 +266,21 @@ const subP = (ctx, pos) => {
   const f = funcP(ctx, pos);
   if (f) {
     /** @type {Sub} */
-    const sub = { kind: 'func', fg: /** @type {'hidroxi' | 'oxo'} */ (f.value), text: f.value };
+    const sub = { kind: 'func', fg: /** @type {'hidroxi' | 'oxo' | 'amino'} */ (f.value), text: f.value };
     return { pos: f.pos, value: sub };
   }
-  return choice(commonRadicalP(false), parenSubP, stemRadicalP(false))(ctx, pos);
+  const ax = asAlkoxy(choice(commonRadicalP('oxi'), parenP('oxi'), stemRadicalP('oxi'))(ctx, pos));
+  if (ax) return ax;
+  return choice(commonRadicalP('il'), parenP('il'), stemRadicalP('il'))(ctx, pos);
 };
 
 /**
- * Localizadores seguidos de separador: "2-", "2,3-", "2 ".
- * @param {Ctx} ctx @param {number} pos
+ * Localizadores seguidos de separador: "2-", "2,3-", "2 ". Con `allowN` acepta también «N» (nitrógeno).
+ * @param {Ctx} ctx @param {number} pos @param {boolean} [allowN]
  * @returns {{ values: number[], span: Span, pos: number } | null}
  */
-function locsWithSep(ctx, pos) {
-  const l = locsP(ctx, pos);
+function locsWithSep(ctx, pos, allowN = false) {
+  const l = (allowN ? locsAnyP : locsP)(ctx, pos);
   if (!l) return null;
   let p = ws(ctx, l.pos).pos;
   if (ctx.input[p] === '-') p++;
@@ -256,7 +298,7 @@ function groupP(ctx, pos) {
   let locants = null;
   /** @type {Span | null} */
   let locSpan = null;
-  const l = locsWithSep(ctx, pos);
+  const l = locsWithSep(ctx, pos, true);
   if (l) {
     locants = l.values;
     locSpan = l.span;
@@ -314,7 +356,7 @@ const midLocsP = (ctx, pos) => {
   return { pos: ws(ctx, b.pos).pos, value: { values: locValues(l.value), span: { from: pos, to: b.pos } } };
 };
 
-const suffixWordP = alts(['oico', 'ona', 'ol', 'al'], 'un sufijo (-ol, -al, -ona, -oico)');
+const suffixWordP = alts(['oico', 'oato', 'amina', 'amida', 'ona', 'ol', 'al'], 'un sufijo (-ol, -al, -ona, -oico, -oato, -amina, -amida)');
 const endingEnInP = alts(['en', 'in'], 'la terminación -en / -in');
 
 /**
@@ -349,7 +391,7 @@ function endingP(ctx, pos) {
  * Sufijo opcional tras la terminación, con "o" de enlace ("propanodiol") y localizadores
  * intermedios ("propan-2-ol").
  * @param {Ctx} ctx @param {number} pos
- * @returns {{ pos: number, kind: 'ol' | 'ona' | 'al' | 'oico', mult: number, mid: FrontLocs | null } | null}
+ * @returns {{ pos: number, kind: Suffix['kind'], mult: number, mid: FrontLocs | null } | null}
  */
 function suffixP(ctx, pos) {
   for (const link of [false, true]) {
@@ -364,7 +406,7 @@ function suffixP(ctx, pos) {
     const w = suffixWordP(ctx, m ? m.pos : mid.pos);
     if (w) {
       return {
-        pos: w.pos, kind: /** @type {'ol' | 'ona' | 'al' | 'oico'} */ (w.value),
+        pos: w.pos, kind: /** @type {Suffix['kind']} */ (w.value),
         mult: m ? multN[m.value] : 1, mid: mid.value,
       };
     }
@@ -381,7 +423,7 @@ const coreP = (ctx, pos) => {
     front = { values: l.values, span: l.span };
     pos = l.pos;
   }
-  const nn = lit('n-')(ctx, pos);
+  const nn = choice(lit('n-'), lit('@-'))(ctx, pos); // «N-hexano» con N mayúscula también es «n-hexano»
   if (nn) pos = nn.pos;
   const st = stemP(ctx, pos);
   if (!st) return null;
@@ -393,7 +435,7 @@ const coreP = (ctx, pos) => {
   if (sfx) {
     end = sfx.pos;
   } else {
-    const o = lit('o', 'la terminación -o (-ano, -eno, -ino) o un sufijo (-ol, -al, -ona, -oico)')(ctx, e.pos);
+    const o = lit('o', 'la terminación -o (-ano, -eno, -ino) o un sufijo (-ol, -al, -ona, -oico, -oato, -amina, -amida)')(ctx, e.pos);
     if (!o) return null;
     end = o.pos;
   }
@@ -425,13 +467,27 @@ const sustitutivoP = (ctx, pos) => {
   const g = many(groupP)(ctx, pos);
   const c = coreP(ctx, g.pos);
   if (!c) return null;
+  let end = c.pos;
+  /** @type {EsterTail | null} */
+  let ester = null;
+  if (c.value.suffix?.kind === 'oato') {
+    // éster: «etanoato de metilo» = parte ácida + «de» + radical -ilo
+    let p = ws(ctx, c.pos).pos;
+    const de = lit('de', 'la palabra «de» (p. ej. «etanoato de metilo»)')(ctx, p);
+    if (!de) return null;
+    p = ws(ctx, de.pos).pos;
+    const rad = radicalWithGroupsP('ilo', atEnd)(ctx, p);
+    if (!rad) return null;
+    ester = { radical: rad.value.radical, text: rad.value.text, common: rad.value.common, span: { from: p, to: rad.pos } };
+    end = rad.pos;
+  }
   /** @type {Ast} */
   const ast = {
     form: 'sustitutivo', groups: g.value,
     parent: { n: c.value.n, span: c.value.parentSpan },
-    unsat: c.value.unsat, suffix: c.value.suffix, front: c.value.front, acid,
+    unsat: c.value.unsat, suffix: c.value.suffix, front: c.value.front, acid, ester,
   };
-  return { pos: c.pos, value: ast };
+  return { pos: end, value: ast };
 };
 
 /** Forma radicofuncional: "bromuro de etilo". @type {import('./peg.js').P} */
@@ -442,7 +498,7 @@ const radicofuncionalP = (ctx, pos) => {
   const de = lit('de')(ctx, p);
   if (!de) return null;
   p = ws(ctx, de.pos).pos;
-  const rad = radicalWithGroupsP(true, atEnd)(ctx, p);
+  const rad = radicalWithGroupsP('ilo', atEnd)(ctx, p);
   if (!rad) return null;
   /** @type {Ast} */
   const ast = {
@@ -452,6 +508,66 @@ const radicofuncionalP = (ctx, pos) => {
     radicalSpan: { from: p, to: rad.pos },
   };
   return { pos: rad.pos, value: ast };
+};
+
+/**
+ * Radical simple (común o lineal, terminado en «il») con multiplicador opcional: «etil», «dimetil».
+ * Es la pieza de «etilmetilamina» y «etil metil éter». Si se lee entero como radical, gana
+ * («tridecil» = 13 carbonos, no «tri + decil»).
+ * @type {import('./peg.js').P}
+ */
+const radTermP = (ctx, pos) => {
+  const core = choice(commonRadicalP('il'), stemRadicalP('il'));
+  let mult = 1;
+  let r = core(ctx, pos);
+  if (!r) {
+    const m = multP(ctx, pos);
+    if (!m) return null;
+    r = core(ctx, m.pos);
+    if (!r) return null;
+    mult = multN[m.value];
+  }
+  /** @type {RadicalTerm} */
+  const term = { radical: r.value.radical, mult, text: r.value.text, common: r.value.common, span: { from: pos, to: r.pos } };
+  return { pos: r.pos, value: term };
+};
+
+/** Amina radicofuncional: «metilamina», «dimetilamina», «etilmetilamina». @type {import('./peg.js').P} */
+const radicoaminaP = (ctx, pos) => {
+  /** @type {RadicalTerm[]} */
+  const terms = [];
+  let p = pos;
+  for (;;) {
+    const t = radTermP(ctx, p);
+    if (!t) break;
+    terms.push(t.value);
+    p = t.pos;
+  }
+  if (!terms.length) return null;
+  const am = lit('amina', 'la terminación -amina')(ctx, p);
+  if (!am) return null;
+  /** @type {Ast} */
+  const ast = { form: 'radicoamina', radicals: terms, aminaSpan: { from: p, to: am.pos } };
+  return { pos: am.pos, value: ast };
+};
+
+/** Éter radicofuncional: «etil metil éter», «dietil éter». @type {import('./peg.js').P} */
+const radicoeterP = (ctx, pos) => {
+  /** @type {RadicalTerm[]} */
+  const terms = [];
+  let p = pos;
+  for (;;) {
+    const t = radTermP(ctx, p);
+    if (!t) break;
+    terms.push(t.value);
+    p = ws(ctx, t.pos).pos;
+  }
+  if (!terms.length) return null;
+  const et = lit('eter', 'la palabra «éter»')(ctx, p);
+  if (!et) return null;
+  /** @type {Ast} */
+  const ast = { form: 'radicoeter', radicals: terms, eterSpan: { from: p, to: et.pos } };
+  return { pos: et.pos, value: ast };
 };
 
 /**
@@ -497,7 +613,7 @@ export function parse(text) {
     return { status: 'vacio', ast: null, notes: [], errors: [], normalized: input };
   }
   const ctx = new Ctx(input);
-  const top = seq(ws, choice(radicofuncionalP, commonCompoundP, sustitutivoP), ws, eof);
+  const top = seq(ws, choice(radicofuncionalP, radicoaminaP, radicoeterP, commonCompoundP, sustitutivoP), ws, eof);
   const r = top(ctx, 0);
   if (r) {
     const ast = /** @type {Ast} */ (r.value[1]);
@@ -571,8 +687,10 @@ function collectNotes(ast) {
       }
     });
   };
+  if (ast.form === 'radicoamina' || ast.form === 'radicoeter') return notes;
   if (ast.form === 'sustitutivo') {
     visit(ast.groups, true);
+    if (ast.ester) visit(ast.ester.radical.groups, false);
     if (ast.suffix?.kind === 'oico' && !ast.acid && !ast.common) {
       notes.push({
         type: 'forma',

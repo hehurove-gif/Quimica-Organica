@@ -173,18 +173,27 @@ export const COMMON_COMPOUNDS = /** @type {{ names: string[], systematic: string
   { names: ['acido acetico'], systematic: 'acido etanoico' },
   { names: ['acido propionico'], systematic: 'acido propanoico' },
   { names: ['acido butirico'], systematic: 'acido butanoico' },
+  { names: ['acetamida'], systematic: 'etanamida' },
+  { names: ['formamida'], systematic: 'metanamida' },
+  { names: ['acetato de metilo'], systematic: 'etanoato de metilo' },
+  { names: ['acetato de etilo'], systematic: 'etanoato de etilo' },
+  { names: ['formiato de metilo'], systematic: 'metanoato de metilo' },
+  { names: ['formiato de etilo'], systematic: 'metanoato de etilo' },
+  { names: ['eter etilico', 'eter dietilico'], systematic: 'etoxietano' },
+  { names: ['eter metilico', 'eter dimetilico'], systematic: 'metoximetano' },
 ]);
 
 /**
- * Funciones que el sistema reconoce pero todavía no implementa (fuera de alcance v0.1).
+ * Funciones que el sistema reconoce pero todavía no implementa.
  * Se usan para decir "esto viene después" en vez de "no entiendo".
+ * (v0.3: éteres, ésteres, aminas y amidas ya se leen y se nombran.)
  */
 export const FUERA_DE_ALCANCE = /** @type {[RegExp, string][]} */ ([
   [/ciclo/, 'ciclos (ciclo…)'],
-  [/benc?eno|benzo|fenil|fenol|tolueno/, 'compuestos aromáticos'],
+  [/benc?eno|benzo|fenil|fenol|tolueno|anilina/, 'compuestos aromáticos'],
   [/vinil|alil|etinil|propargil/, 'sustituyentes con enlaces múltiples (vinil, alil…)'],
-  [/oato(?![a-z])|[a-z]ato de |ester|carboxi|formil/, 'ésteres y otros derivados de ácidos'],
-  [/amina|amino|amida/, 'aminas y amidas'],
-  [/eter|metoxi|etoxi|propoxi|butoxi/, 'éteres'],
+  [/dioato|trioato|dicarboxil|anhidrido/, 'diésteres, poliésteres y anhídridos'],
+  [/carboxi|formil|carbamoil|acil/, 'derivados de ácidos (carboxi, formil, carbamoil…)'],
+  [/nitril|ciano|imina|hidrazin|hidroxilamin|urea|carbamato/, 'nitrilos, iminas y otros grupos con nitrógeno'],
   [/nitro|sulfo|tio/, 'otros grupos funcionales'],
 ]);
