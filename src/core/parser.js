@@ -19,7 +19,7 @@ import {
   Ctx, alts, choice, eof, integer, lit, many, opt, seq, ws,
 } from './peg.js';
 import {
-  COMMON_COMPOUNDS, COMMON_RADICALS, FUERA_DE_ALCANCE, HALIDE_WORDS, HALO_PREFIXES, MULTS, STEMS_READ,
+  COMMON_ACYL, COMMON_COMPOUNDS, COMMON_RADICALS, FUERA_DE_ALCANCE, HALIDE_WORDS, HALO_PREFIXES, MULTS, STEMS_READ,
 } from './lexicon.js';
 
 /**
@@ -635,6 +635,22 @@ const commonCompoundP = (ctx, pos) => {
 };
 
 /**
+ * Éster con acilo de nombre común y cualquier radical: «acetato de isopropilo».
+ * Se reescribe como «etanoato de isopropilo» y se lee con la gramática normal.
+ * @type {import('./peg.js').P}
+ */
+const commonEsterP = (ctx, pos) => {
+  const m = new RegExp(`^(${Object.keys(COMMON_ACYL).join('|')}) de (\\S+)`).exec(ctx.input.slice(pos));
+  if (!m) return null;
+  const systematic = `${COMMON_ACYL[m[1]]} de ${m[2]}`;
+  const inner = parse(systematic);
+  if (!inner.ast || inner.ast.form !== 'sustitutivo') return null;
+  /** @type {Ast} */
+  const ast = { ...stripSpans(inner.ast), common: { name: `${m[1]} de ${m[2]}`, systematic } };
+  return { pos: pos + m[0].length, value: ast };
+};
+
+/**
  * @param {string} text
  * @returns {ParseResult}
  */
@@ -644,7 +660,7 @@ export function parse(text) {
     return { status: 'vacio', ast: null, notes: [], errors: [], normalized: input };
   }
   const ctx = new Ctx(input);
-  const top = seq(ws, choice(radicofuncionalP, radicoaminaP, radicoeterP, commonCompoundP, sustitutivoP), ws, eof);
+  const top = seq(ws, choice(radicofuncionalP, radicoaminaP, radicoeterP, commonCompoundP, commonEsterP, sustitutivoP), ws, eof);
   const r = top(ctx, 0);
   if (r) {
     const ast = /** @type {Ast} */ (r.value[1]);

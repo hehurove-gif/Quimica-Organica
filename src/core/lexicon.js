@@ -183,6 +183,14 @@ export const COMMON_COMPOUNDS = /** @type {{ names: string[], systematic: string
   { names: ['eter metilico', 'eter dimetilico'], systematic: 'metoximetano' },
 ]);
 
+/** Acilos comunes de los ésteres de clase: «acetato de isopropilo» = «etanoato de isopropilo». */
+export const COMMON_ACYL = /** @type {Record<string, string>} */ ({
+  formiato: 'metanoato',
+  acetato: 'etanoato',
+  propionato: 'propanoato',
+  butirato: 'butanoato',
+});
+
 /**
  * Funciones que el sistema reconoce pero todavía no implementa.
  * Se usan para decir "esto viene después" en vez de "no entiendo".
@@ -195,5 +203,6 @@ export const FUERA_DE_ALCANCE = /** @type {[RegExp, string][]} */ ([
   [/dioato|trioato|dicarboxil|anhidrido/, 'diésteres, poliésteres y anhídridos'],
   [/carboxi|formil|carbamoil|acil/, 'derivados de ácidos (carboxi, formil, carbamoil…)'],
   [/nitril|ciano|imina|hidrazin|hidroxilamin|urea|carbamato/, 'nitrilos, iminas y otros grupos con nitrógeno'],
+  [/\bde (sodio|potasio|litio|calcio|magnesio|amonio)\b/, 'sales orgánicas (acetato de sodio, propanoato de potasio…)'],
   [/nitro|sulfo|tio/, 'otros grupos funcionales'],
 ]);

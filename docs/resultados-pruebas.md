@@ -6,9 +6,9 @@ Fecha: 2026-11-21 (v0.2: 2026-11-18) · Comandos: `npm test`, `npm run typecheck
 
 | Comprobación | Resultado |
 |---|---|
-| `npm test` | 232 pruebas: **232 pasan, 0 fallan, 0 `todo`** |
+| `npm test` | 241 pruebas: **241 pasan, 0 fallan, 0 `todo`** |
 | `npm run typecheck` | limpio |
-| `tools/check_golden.py` (fórmulas calculadas aparte, en Python) | 118 compuestos, 222 nombres, **0 discrepancias** |
+| `tools/check_golden.py` (fórmulas calculadas aparte, en Python) | 118 compuestos, 223 nombres, **0 discrepancias** |
 | UI en Chrome headless | alqueno+alcohol, ácido, incompleto y fuera de alcance se muestran como se espera (captura revisada a mano) |
 
 ## Matriz plan → ejecución
@@ -41,7 +41,7 @@ Fecha: 2026-11-21 (v0.2: 2026-11-18) · Comandos: `npm test`, `npm run typecheck
   2. Varios ejemplos de clase no respetan el orden alfabético de los prefijos (`2,4-dimetil-2-aminohexano`, `4-etil-2,2-dimetil-3-bromohexano`, `3-etil-6-metil-5-isopentil-4-aminononano`); el sistema los marca con aviso y propone el orden correcto.
   3. `BUTOXIBUTANO` se escribe sin localizador en clase; aquí es incompleto (`1-` o `2-butoxibutano` son moléculas distintas).
   4. Las amidas aparecen como `butanoamida`; se leen, pero el nombre que se genera es `butanamida`.
-  5. Las sales orgánicas (`acetato de sodio`, `propanoato de potasio`) y `acetato de isopropilo` (nombre común con radical ramificado) no se leen todavía.
+  5. `acetato de isopropilo` y demás ésteres con acilo común (acetato, formiato, propionato, butirato) + cualquier radical: **resuelto** (`test/esteres-comunes-t10.test.js`). Las sales orgánicas (`acetato de sodio`, `propanoato de potasio`) siguen sin soporte: el modelo no tiene iones, y el sistema lo declara `fuera_de_alcance` en vez de dibujar un éster.
 
 ### v0.2
 

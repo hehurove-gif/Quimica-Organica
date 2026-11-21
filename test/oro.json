@@ -704,7 +704,9 @@
     "nombre": "etanoato de isopropilo",
     "formula": "C₅H₁₀O₂",
     "smiles": "CC(=O)OC(C)C",
-    "variantes": []
+    "variantes": [
+      "acetato de isopropilo"
+    ]
   },
   {
     "nombre": "propanoato de isobutilo",
