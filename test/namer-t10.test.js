@@ -29,7 +29,7 @@ const CASOS = [
   ['CC(=O)OCC(C)C', 'etanoato de isobutilo', 'etanoato de isobutilo', null],
   ['CCCC(=O)OCCCC', 'butanoato de butilo', 'butanoato de butilo', null],
   ['C(=O)OC', 'metanoato de metilo', 'metanoato de metilo', null],
-  ['C=CC(=O)OC', 'propenoato de metilo', 'propenoato de metilo', null],
+  ['C=CC(=O)OC', '2-propenoato de metilo', 'prop-2-enoato de metilo', null], // enlace múltiple + función: se conservan los localizadores
   ['OCC(=O)OC', '2-hidroxietanoato de metilo', '2-hidroxietanoato de metilo', null], // éster > alcohol
   // aminas: la cadena más larga contiene al N; los demás radicales llevan «N»
   ['CCCN', '1-propanamina', 'propan-1-amina', 'propilamina'],

@@ -516,6 +516,10 @@ function shortest(mol, m, style) {
   }
   // con sustituyentes se conservan todos los localizadores (más claro para quien aprende)
   if (m.subs.length > 0) return full;
+  // Con enlace múltiple y función a la vez, o con varias funciones iguales (butanodiona), los
+  // localizadores se escriben siempre: «2-butin-1-ol», «3-buten-2-ona», «2,3-butanodiona».
+  const conservar = (m.unsat !== null && m.fn !== null) || m.fnLocs.length > 1;
+  if (conservar) return full;
   if (m.fn && (m.fn === 'cetona' || m.fn === 'alcohol' || m.fn === 'amina')) {
     const t = formatName(m, style, { ...omit, s: true });
     if (readsBack(t, mol)) omit.s = true;

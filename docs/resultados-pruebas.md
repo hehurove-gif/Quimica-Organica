@@ -43,6 +43,8 @@ Fecha: 2026-11-21 (v0.2: 2026-11-18) · Comandos: `npm test`, `npm run typecheck
   4. Las amidas aparecen como `butanoamida`; se leen, pero el nombre que se genera es `butanamida`.
   5. `acetato de isopropilo` y demás ésteres con acilo común (acetato, formiato, propionato, butirato) + cualquier radical: **resuelto** (`test/esteres-comunes-t10.test.js`). Las sales orgánicas (`acetato de sodio`, `propanoato de potasio`) siguen sin soporte: el modelo no tiene iones, y el sistema lo declara `fuera_de_alcance` en vez de dibujar un éster.
 
+- **Revisión de nombres (21-nov):** se revisaron los 118 compuestos; la única inconsistencia real era la omisión de localizadores con enlace múltiple + función (`2-butinol`, `butenona`, `butanodiona`, `ácido propenoico`). Corregida; detalle y puntos para el profesor en `docs/revision-de-nombres.md`.
+
 ### v0.2
 
 - Dos pruebas mías estaban mal y las corrigió el sistema: `2,2,2-tribromoetanol` sí es válido (el carbono 2 completa sus 4 enlaces), y `propenal` sin localizador es ambiguo porque `O=C=C-C` cumple valencias.
