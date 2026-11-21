@@ -101,17 +101,22 @@ test('diagnóstico: numeración, cadena, orden alfabético y nombre correcto', (
 });
 
 test('moléculas fuera de alcance no reciben nombre inventado', () => {
-  // éter: C-O-C
+  // peróxido: C-O-O-C (los éteres y las aminas ya se nombran desde T10)
   const m = new Molecule();
-  const a = m.addAtom('C');
-  const o = m.addAtom('O');
-  m.addBond(a, o);
-  m.addBond(o, m.addAtom('C'));
+  const o1 = m.addAtom('O');
+  const o2 = m.addAtom('O');
+  m.addBond(m.addAtom('C'), o1);
+  m.addBond(o1, o2);
+  m.addBond(o2, m.addAtom('C'));
   assert.equal(nameMolecule(m).ok, false);
-  // amina: C-N
-  const am = new Molecule();
-  am.addBond(am.addAtom('C'), am.addAtom('N'));
-  assert.equal(nameMolecule(am).ok, false);
+  // nitrilo: C#N, e hidrazina: C-N-N-C
+  assert.equal(nameMolecule(fromSmiles('CC#N')).ok, false);
+  assert.equal(nameMolecule(fromSmiles('CNNC')).ok, false);
+  // imida: un N unido a dos carbonilos
+  assert.equal(nameMolecule(fromSmiles('CC(=O)NC(C)=O')).ok, false);
+  // anhídrido y carbamato
+  assert.equal(nameMolecule(fromSmiles('CC(=O)OC(C)=O')).ok, false);
+  assert.equal(nameMolecule(fromSmiles('CNC(=O)OC')).ok, false);
   // eninos (doble y triple en la misma cadena): todavía no
   const en = fromSmiles('C=CC#C');
   assert.equal(nameMolecule(en).ok, false);

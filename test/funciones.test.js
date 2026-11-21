@@ -100,7 +100,8 @@ test('«ácido» exige -oico, y -oico sin «ácido» es válido con nota', () =>
 });
 
 test('funciones aún no soportadas: fuera de alcance, nunca una estructura', () => {
-  for (const n of ['propanamida', 'etilamina', 'etoxietano', 'etanoato de metilo']) {
+  // (éteres, ésteres, aminas y amidas ya se soportan desde T10)
+  for (const n of ['propanonitrilo', 'etanotiol', 'anhídrido acético', 'urea', 'ciclohexano']) {
     const r = analyze(n);
     assert.equal(r.status, 'fuera_de_alcance', n);
     assert.equal(r.molecule, null, n);

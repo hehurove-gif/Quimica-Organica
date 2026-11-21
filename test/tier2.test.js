@@ -4,9 +4,7 @@ import assert from 'node:assert/strict';
 import { analyze } from '../src/core/analyze.js';
 
 /**
- * T10: familias aún no implementadas. Dos garantías:
- *  1) HOY se declaran fuera de alcance y no devuelven estructura (prueba real, verde).
- *  2) MAÑANA deben dar esta fórmula (prueba `todo`, visible en el reporte, no oculta).
+ * T10: éteres, ésteres, aminas y amidas (v0.3). Cada nombre debe dar esta fórmula.
  * @type {[string, string][]}
  */
 const FUTURO = [
@@ -20,19 +18,11 @@ const FUTURO = [
   ['propanamida', 'C₃H₇NO'],
 ];
 
-test('T10 (hoy): éteres, ésteres, aminas y amidas se declaran fuera de alcance', () => {
-  for (const [nombre] of FUTURO) {
-    const a = analyze(nombre);
-    assert.notEqual(a.status, 'valido', nombre);
-    assert.equal(a.molecule, null, `${nombre}: no debe inventar estructura`);
-    assert.ok(['fuera_de_alcance', 'invalido'].includes(a.status), `${nombre}: ${a.status}`);
-  }
-});
-
 for (const [nombre, formula] of FUTURO) {
-  test(`T10 (pendiente): ${nombre} -> ${formula}`, { todo: 'familia aún no implementada' }, () => {
+  test(`T10: ${nombre} -> ${formula}`, () => {
     const a = analyze(nombre);
-    assert.equal(a.status, 'valido');
+    assert.equal(a.status, 'valido', nombre);
     assert.equal(a.formula, formula);
+    assert.ok(a.molecule, `${nombre}: debe devolver estructura`);
   });
 }

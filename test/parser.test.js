@@ -61,7 +61,7 @@ test('errores reales se marcan como inválidos con posición', () => {
 });
 
 test('funciones aún no implementadas se marcan fuera de alcance, no como error', () => {
-  for (const s of ['ciclohexano', 'benceno', 'etilamina', 'metoxietano', 'etanamida', 'acetato de etilo']) {
+  for (const s of ['ciclohexano', 'benceno', 'propanonitrilo', 'etanotiol', 'anhídrido acético']) {
     assert.equal(status(s), 'fuera_de_alcance', s);
   }
 });

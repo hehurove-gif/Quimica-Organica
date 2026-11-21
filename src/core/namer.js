@@ -1,11 +1,16 @@
 // @ts-check
 /**
  * Estructura -> nombre (acíclicos: alcanos, alquenos, alquinos, halogenuros, alcoholes,
- * aldehídos, cetonas y ácidos carboxílicos) y diagnóstico pedagógico.
+ * aldehídos, cetonas, ácidos carboxílicos, ésteres, amidas, aminas y éteres) y diagnóstico
+ * pedagógico.
  *
  * Reglas aplicadas, en este orden (IUPAC 1979, la que se enseña en bachillerato):
- *   0. Grupo principal = el de mayor prioridad: ácido > aldehído > cetona > alcohol.
- *      El resto de funciones se nombran como prefijos (hidroxi-, oxo-).
+ *   0. Grupo principal = el de mayor prioridad:
+ *      ácido > éster > amida > aldehído > cetona > alcohol > amina.
+ *      El resto de funciones se nombran como prefijos (hidroxi-, oxo-, amino-).
+ *      Los éteres no son grupo principal: el lado más pequeño se nombra como alcoxi (-oxi).
+ *      Éster: «alcanoato de …ilo» (la cola «…ilo» viene del alcohol y no es parte de la cadena).
+ *      Amina y amida: los demás radicales del nitrógeno se localizan con «N» (N,N-dimetil…).
  *   1. Cadena principal = la que contiene MÁS grupos principales.
  *   2. Luego, la que contiene MÁS enlaces múltiples.
  *   3. Luego, la más larga.
@@ -28,12 +33,13 @@ class Unsupported extends Error {}
 class Inviable extends Unsupported {}
 
 /**
+ * `pos` es el carbono de la cadena (1..n) o `N_POS` (-1) si el sustituyente cuelga del nitrógeno.
  * @typedef {{ pos: number, text: string, sortKey: string, complex: boolean }} Sub
- * @typedef {'acido' | 'aldehido' | 'cetona' | 'alcohol'} FnKind
+ * @typedef {'acido' | 'ester' | 'amida' | 'aldehido' | 'cetona' | 'alcohol' | 'amina'} FnKind
  * @typedef {{
  *   n: number, subs: Sub[], name: string, iupac: string,
  *   fn: FnKind | null, fnLocs: number[], unsat: 'en' | 'in' | null, unsatLocs: number[],
- *   path: number[]
+ *   path: number[], tail: string | null
  * }} Model
  * @typedef {{
  *   ok: true, systematic: string, iupac2013: string, radicofuncional: string | null,
@@ -42,6 +48,8 @@ class Inviable extends Unsupported {}
  */
 
 const MAX_CHAIN = 99;
+/** Posición que representa al nitrógeno («N-metil»). Igual que en build.js. */
+const N_POS = -1;
 
 /** Clave para ordenar alfabéticamente: sin localizadores, sin sec-/terc-, sin paréntesis. @param {string} text */
 function sortKeyOf(text) {
@@ -108,10 +116,10 @@ function pathsFrom(mol, start, avoid) {
   return out;
 }
 
-const PRIORITY = /** @type {Record<FnKind, number>} */ ({ acido: 4, aldehido: 3, cetona: 2, alcohol: 1 });
+const PRIORITY = /** @type {Record<FnKind, number>} */ ({ acido: 7, ester: 6, amida: 5, aldehido: 4, cetona: 3, alcohol: 2, amina: 1 });
 
 /**
- * Oxígenos de un carbono: =O (oxo) e hidroxilos (-OH).
+ * Heteroátomos unidos a un carbono: =O (oxo), –OH (oh), –O–C (éter/éster: O con dos vecinos) y N.
  * @param {Molecule} mol
  * @param {number} c
  */
@@ -120,11 +128,24 @@ function oxygensOf(mol, c) {
   const oxo = [];
   /** @type {number[]} */
   const oh = [];
+  /** @type {number[]} */
+  const ether = [];
+  /** @type {number[]} */
+  const nitrogens = [];
   for (const nb of mol.neighbors(c)) {
-    if (mol.element(nb.id) !== 'O') continue;
-    (nb.order === 2 ? oxo : oh).push(nb.id);
+    const el = mol.element(nb.id);
+    if (el === 'N') nitrogens.push(nb.id);
+    if (el !== 'O') continue;
+    if (nb.order === 2) oxo.push(nb.id);
+    else if (mol.neighbors(nb.id).length === 1) oh.push(nb.id);
+    else ether.push(nb.id);
   }
-  return { oxo, oh };
+  return { oxo, oh, ether, nitrogens };
+}
+
+/** ¿Este nitrógeno está unido a un carbonilo (es el N de una amida)? @param {Molecule} mol @param {number} n */
+function isAmideN(mol, n) {
+  return mol.neighbors(n).some((nb) => mol.element(nb.id) === 'C' && oxygensOf(mol, nb.id).oxo.length > 0);
 }
 
 /**
@@ -134,12 +155,32 @@ function oxygensOf(mol, c) {
  * @returns {FnKind | null}
  */
 function fnOf(mol, c) {
-  const { oxo, oh } = oxygensOf(mol, c);
+  const { oxo, oh, ether, nitrogens } = oxygensOf(mol, c);
   const cn = carbonNbrs(mol, c).length;
   if (oxo.length && oh.length) return 'acido';
+  if (oxo.length && ether.length) return 'ester';
+  if (oxo.length && nitrogens.length) return 'amida';
   if (oxo.length) return cn <= 1 ? 'aldehido' : 'cetona';
   if (oh.length) return 'alcohol';
+  if (nitrogens.some((n) => !isAmideN(mol, n))) return 'amina';
   return null;
+}
+
+/** ¿El carbono es un carbonilo de ácido, éster o amida? @param {Molecule} mol @param {number} c */
+function isAcylC(mol, c) {
+  const k = fnOf(mol, c);
+  return k === 'acido' || k === 'ester' || k === 'amida';
+}
+
+/**
+ * Cuántas veces aparece la función `kind` en el carbono (-ol y -amina pueden repetirse).
+ * @param {Molecule} mol @param {number} c @param {FnKind} kind
+ */
+function fnCount(mol, c, kind) {
+  if (fnOf(mol, c) !== kind) return 0;
+  if (kind === 'alcohol') return oxygensOf(mol, c).oh.length;
+  if (kind === 'amina') return oxygensOf(mol, c).nitrogens.filter((n) => !isAmideN(mol, n)).length;
+  return 1;
 }
 
 /**
@@ -166,12 +207,39 @@ function subsOf(mol, path, attachedTo, principal = null) {
         subs.push({ pos: i + 1, text, sortKey: text, complex: false });
       } else if (el === 'O') {
         const cls = fnOf(mol, id);
-        if (attachedTo !== -1 || principal === null) {
-          throw new Inviable('Un radical con grupo funcional (hidroximetil, formil…) todavía no se puede nombrar.');
+        if (attachedTo !== -1) {
+          throw new Inviable('Un radical con grupo funcional (hidroximetil, formil, metoxietil…) todavía no se puede nombrar.');
         }
-        if (cls === principal) continue; // forma parte del sufijo
-        const text = nb.order === 2 ? 'oxo' : 'hidroxi';
-        subs.push({ pos: i + 1, text, sortKey: text, complex: false });
+        if (cls !== null && cls === principal) continue; // forma parte del sufijo (incluye el O del éster)
+        if (cls === 'ester' || cls === 'amida') {
+          throw new Inviable('Un éster o una amida que no es el grupo principal (carboxi, metoxicarbonil, carbamoil…) todavía no se puede nombrar.');
+        }
+        if (mol.neighbors(nb.id).length === 1) {
+          const text = nb.order === 2 ? 'oxo' : 'hidroxi';
+          subs.push({ pos: i + 1, text, sortKey: text, complex: false });
+        } else {
+          // éter: el otro lado del oxígeno se nombra como alcoxi (metoxi, etoxi, isopropoxi…)
+          const other = carbonNbrs(mol, nb.id).find((x) => x !== id);
+          if (other === undefined) throw new Inviable('Un oxígeno sin segundo carbono.');
+          if (isAcylC(mol, other)) throw new Inviable('Un grupo aciloxi (R–CO–O–) como sustituyente todavía no se puede nombrar.');
+          const r = radicalName(mol, other, nb.id);
+          const text = r.text.replace(/il$/, 'oxi');
+          subs.push({ pos: i + 1, text, sortKey: sortKeyOf(text), complex: r.complex });
+        }
+      } else if (el === 'N') {
+        const cls = fnOf(mol, id);
+        if (attachedTo !== -1) {
+          throw new Inviable('Un radical con grupo funcional (aminometil, acetamido…) todavía no se puede nombrar.');
+        }
+        if (isAmideN(mol, nb.id)) {
+          if (cls === 'amida' && principal === 'amida') continue; // el N de la amida es parte del sufijo
+          throw new Inviable('Un N-acilo (acetamido…) o una amida que no es el grupo principal todavía no se puede nombrar.');
+        }
+        if (cls === 'amina' && principal === 'amina') continue; // parte del sufijo -amina
+        if (mol.neighbors(nb.id).length > 1) {
+          throw new Inviable('Una amina sustituida (metilamino, dimetilamino…) como sustituyente todavía no se puede nombrar.');
+        }
+        subs.push({ pos: i + 1, text: 'amino', sortKey: 'amino', complex: false });
       } else {
         const r = radicalName(mol, nb.id, id);
         subs.push({ pos: i + 1, text: r.text, sortKey: sortKeyOf(r.text), complex: r.complex });
@@ -258,7 +326,8 @@ function compose(subs, n, omitLocants) {
       const mult = k > 1 ? multOf(k) : '';
       if (mult === null) throw new Unsupported(`Hay ${k} sustituyentes iguales (el límite actual es 20).`);
       const t = g.complex ? `(${g.text})` : g.text;
-      return omitLocants ? `${mult}${t}` : `${positions.join(',')}-${mult}${t}`;
+      const locs = positions.map((p) => (p === N_POS ? 'N' : p)).join(',');
+      return omitLocants ? `${mult}${t}` : `${locs}-${mult}${t}`;
     })
     .join('-');
 }
@@ -296,10 +365,42 @@ export function modelFor(mol, path, principal = principalOf(mol)) {
   const fnLocs = [];
   if (principal) {
     path.forEach((id, i) => {
-      if (fnOf(mol, id) !== principal) return;
-      const k = principal === 'alcohol' ? oxygensOf(mol, id).oh.length : 1;
+      const k = fnCount(mol, id, principal);
       for (let j = 0; j < k; j++) fnLocs.push(i + 1);
     });
+  }
+  // Nitrógenos de la función principal (amina/amida): sus otros radicales son N-sustituyentes
+  /** @type {string | null} */
+  let tail = null;
+  if (principal === 'amina' || principal === 'amida') {
+    /** @type {number[]} */
+    const ns = [];
+    for (const id of path) {
+      if (fnOf(mol, id) !== principal) continue;
+      for (const nb of mol.neighbors(id)) {
+        if (mol.element(nb.id) === 'N' && isAmideN(mol, nb.id) === (principal === 'amida')) ns.push(nb.id);
+      }
+    }
+    for (const nId of ns) {
+      const extra = mol.neighbors(nId).filter((nb) => !path.includes(nb.id));
+      if (ns.length > 1 && extra.length) {
+        throw new Unsupported('Con más de un nitrógeno hay que distinguir N y N′; esa notación todavía no está soportada.');
+      }
+      for (const nb of extra) {
+        if (mol.element(nb.id) !== 'C') throw new Inviable('Un nitrógeno unido a algo que no es carbono todavía no se puede nombrar.');
+        const r = radicalName(mol, nb.id, nId);
+        subs.push({ pos: N_POS, text: r.text, sortKey: sortKeyOf(r.text), complex: r.complex });
+      }
+    }
+  }
+  if (principal === 'ester') {
+    if (fnLocs.length > 1) throw new Unsupported('Los diésteres todavía no se pueden nombrar.');
+    const c = path[fnLocs[0] - 1];
+    const o = oxygensOf(mol, c).ether[0];
+    const other = carbonNbrs(mol, o).find((x) => x !== c);
+    if (other === undefined) throw new Inviable('Un éster sin radical al otro lado del oxígeno.');
+    if (isAcylC(mol, other)) throw new Inviable('Los anhídridos y otros diacilos todavía no se pueden nombrar.');
+    tail = `${radicalName(mol, other, o).text}o`;
   }
   /** @type {number[]} */
   const unsatLocs = [];
@@ -315,7 +416,7 @@ export function modelFor(mol, path, principal = principalOf(mol)) {
   if (orders.size > 1) throw new Unsupported('Enlaces dobles y triples en la misma cadena (eninos): todavía no se pueden nombrar.');
   const unsat = orders.size ? (orders.has(2) ? 'en' : 'in') : null;
   /** @type {Model} */
-  const m = { n, subs, name: '', iupac: '', fn: principal, fnLocs, unsat, unsatLocs, path };
+  const m = { n, subs, name: '', iupac: '', fn: principal, fnLocs, unsat, unsatLocs, path, tail };
   m.name = formatName(m, 'escolar', { u: false, s: false });
   m.iupac = formatName(m, 'iupac', { u: false, s: false });
   return m;
@@ -331,14 +432,15 @@ export function modelFor(mol, path, principal = principalOf(mol)) {
 function formatName(m, style, omit, omitPrefix) {
   const { n, subs, fn, fnLocs, unsat, unsatLocs } = m;
   const stem = /** @type {string} */ (stemOf(n));
-  const skipPrefix = omitPrefix ?? (n === 1 || (n === 2 && subs.length === 1 && !fn && !unsat));
+  const hasN = subs.some((x) => x.pos === N_POS) || fn === 'amina' || fn === 'amida'; // con N posible, los localizadores se escriben siempre
+  const skipPrefix = omitPrefix ?? (!hasN && (n === 1 || (n === 2 && subs.length === 1 && !fn && !unsat)));
   const prefixes = compose(subs, n, skipPrefix);
   const uk = unsat === 'en' ? 'en' : 'in';
   const uMult = unsatLocs.length;
   const sMult = fnLocs.length;
   const mw = (/** @type {number} */ k) => (k > 1 ? multOf(k) || '' : '');
-  const sWord = fn ? { acido: 'oico', aldehido: 'al', cetona: 'ona', alcohol: 'ol' }[fn] : '';
-  const sLocated = fn === 'cetona' || fn === 'alcohol'; // aldehído y ácido siempre en el extremo
+  const sWord = fn ? { acido: 'oico', ester: 'oato', amida: 'amida', aldehido: 'al', cetona: 'ona', alcohol: 'ol', amina: 'amina' }[fn] : '';
+  const sLocated = fn === 'cetona' || fn === 'alcohol' || fn === 'amina'; // las funciones terminales siempre están en el extremo
   const sLocs = fnLocs.join(',');
   const uLocs = unsatLocs.join(',');
   let core;
@@ -365,7 +467,7 @@ function formatName(m, style, omit, omitPrefix) {
     }
   }
   const lead = prefixes ? `${prefixes}${style === 'escolar' && /^\d/.test(core) ? '-' : ''}` : '';
-  return `${fn === 'acido' ? 'ácido ' : ''}${lead}${core}`;
+  return `${fn === 'acido' ? 'ácido ' : ''}${lead}${core}${m.tail ? ` de ${m.tail}` : ''}`;
 }
 
 /**
@@ -389,9 +491,15 @@ function readsBack(text, mol) {
 function shortest(mol, m, style) {
   const omit = { u: false, s: false };
   const full = formatName(m, style, omit);
+  // Amina con solo N-sustituyentes («N-metiletanamina», no «N-metiletan-1-amina»): se quita el
+  // localizador de la amina solo si el nombre más corto se lee igual
+  if (m.fn === 'amina' && m.subs.length > 0 && m.subs.every((x) => x.pos === N_POS)) {
+    const t = formatName(m, style, { ...omit, s: true });
+    return readsBack(t, mol) ? t : full;
+  }
   // con sustituyentes se conservan todos los localizadores (más claro para quien aprende)
   if (m.subs.length > 0) return full;
-  if (m.fn && (m.fn === 'cetona' || m.fn === 'alcohol')) {
+  if (m.fn && (m.fn === 'cetona' || m.fn === 'alcohol' || m.fn === 'amina')) {
     const t = formatName(m, style, { ...omit, s: true });
     if (readsBack(t, mol)) omit.s = true;
   }
@@ -414,24 +522,37 @@ function whyNot(mol) {
   if (!mol.isTree()) return 'Las estructuras con ciclos todavía no se pueden nombrar.';
   if (!mol.atoms.some((a) => a.el === 'C')) return 'No hay carbonos.';
   for (const a of mol.atoms) {
-    if (a.el !== 'C' && a.el !== 'O' && !HALOGENS.includes(a.el)) return `El elemento ${a.el} todavía no está soportado para nombrar.`;
+    if (a.el !== 'C' && a.el !== 'O' && a.el !== 'N' && !HALOGENS.includes(a.el)) return `El elemento ${a.el} todavía no está soportado para nombrar.`;
     const nbs = mol.neighbors(a.id);
     if (HALOGENS.includes(a.el) && nbs.some((nb) => mol.element(nb.id) !== 'C')) {
-      return 'Un halógeno unido a otro halógeno no se puede nombrar todavía.';
+      return 'Un halógeno unido a otro halógeno o a O/N no se puede nombrar todavía.';
     }
     if (a.el === 'O') {
-      if (nbs.length !== 1 || mol.element(nbs[0].id) !== 'C') {
-        return 'Los éteres y otras estructuras con oxígeno entre dos átomos todavía no se pueden nombrar.';
+      if (nbs.length === 0 || nbs.some((nb) => mol.element(nb.id) !== 'C')) {
+        return 'Los peróxidos, el agua y los enlaces O–N u O–O todavía no se pueden nombrar.';
+      }
+      if (nbs.length > 2) return 'Un oxígeno con más de dos enlaces todavía no se puede nombrar.';
+    }
+    if (a.el === 'N') {
+      if (nbs.length === 0 || nbs.some((nb) => mol.element(nb.id) !== 'C' || nb.order !== 1)) {
+        return 'Nitrilos, iminas, hidrazinas y enlaces N–N/N–O todavía no se pueden nombrar (solo aminas y amidas con enlaces sencillos al carbono).';
+      }
+      if (nbs.filter((nb) => oxygensOf(mol, nb.id).oxo.length > 0).length > 1) {
+        return 'Las imidas (un nitrógeno unido a dos carbonilos) todavía no se pueden nombrar.';
       }
     }
     if (a.el === 'C') {
       const ox = oxygensOf(mol, a.id);
-      if (ox.oxo.length > 1 || (ox.oxo.length === 1 && ox.oh.length > 1)) {
-        return 'Carbonos con varios oxígenos (CO₂, ácido carbónico…) todavía no se pueden nombrar.';
+      const single = ox.oh.length + ox.ether.length + ox.nitrogens.length;
+      if (ox.oxo.length > 1 || (ox.oxo.length === 1 && single > 1)) {
+        return 'Carbonos con varios oxígenos o nitrógenos (CO₂, carbamatos, ureas, anhídridos…) todavía no se pueden nombrar.';
       }
-    }
-    if (a.el === 'C' && oxygensOf(mol, a.id).oxo.length && mol.neighbors(a.id).some((nb) => HALOGENS.includes(mol.element(nb.id)))) {
-      return 'Los halogenuros de acilo todavía no se pueden nombrar.';
+      if (ox.oxo.length === 0 && (ox.ether.length > 1 || (ox.ether.length === 1 && single > 1) || ox.nitrogens.length > 1 || (ox.nitrogens.length === 1 && ox.oh.length > 0))) {
+        return 'Acetales, hemiacetales y otros carbonos con varios heteroátomos todavía no se pueden nombrar.';
+      }
+      if (ox.oxo.length && nbs.some((nb) => HALOGENS.includes(mol.element(nb.id)))) {
+        return 'Los halogenuros de acilo todavía no se pueden nombrar.';
+      }
     }
   }
   return null;
@@ -460,6 +581,45 @@ function compareModels(a, b) {
     compareSubs(a.subs, b.subs), // sustituyentes (conjunto y luego orden alfabético)
   ];
   return steps.find((x) => x !== 0) ?? 0;
+}
+
+/**
+ * Forma radicofuncional, solo si el texto se lee de vuelta como la misma molécula:
+ *   - halogenuro de alquilo con un único halógeno: «bromuro de etilo»
+ *   - éter sencillo (solo C y un O entre dos radicales): «etil metil éter», «dietil éter»
+ *   - amina sencilla (solo C y un N con 1 a 3 radicales): «etilmetilamina», «dimetilamina»
+ * @param {Molecule} mol
+ * @returns {string | null}
+ */
+function radicofuncionalOf(mol) {
+  const halos = mol.atoms.filter((a) => HALOGENS.includes(a.el));
+  const hasO = mol.atoms.some((a) => a.el === 'O');
+  const hasN = mol.atoms.some((a) => a.el === 'N');
+  const multiple = mol.bonds.some((b) => b.order > 1);
+  if (multiple) return null;
+  if (halos.length === 1 && !hasO && !hasN) {
+    const h = halos[0].id;
+    const c = mol.neighbors(h)[0].id;
+    const r = radicalName(mol, c, h);
+    return `${HALIDE_CANON[halos[0].el]} de ${r.text}o`;
+  }
+  if (halos.length) return null;
+  const heteros = mol.atoms.filter((a) => a.el === 'O' || a.el === 'N');
+  if (heteros.length !== 1) return null;
+  const h = heteros[0];
+  const nbs = mol.neighbors(h.id).map((nb) => nb.id);
+  if (h.el === 'O' ? nbs.length !== 2 : nbs.length < 1 || nbs.length > 3) return null;
+  // todos los carbonos del molécula deben colgar de este heteroátomo (sin otros grupos)
+  const rads = nbs.map((c) => radicalName(mol, c, h.id));
+  if (rads.some((r) => r.complex)) return null;
+  /** @type {Map<string, number>} */
+  const count = new Map();
+  for (const r of rads) count.set(r.text, (count.get(r.text) || 0) + 1);
+  const parts = [...count.entries()]
+    .sort((a, b) => (sortKeyOf(a[0]) < sortKeyOf(b[0]) ? -1 : sortKeyOf(a[0]) > sortKeyOf(b[0]) ? 1 : 0))
+    .map(([text, k]) => `${k > 1 ? multOf(k) || '' : ''}${text}`);
+  const text = h.el === 'O' ? `${parts.join(' ')} éter` : `${parts.join('')}amina`;
+  return readsBack(text, mol) ? text : null;
 }
 
 /**
@@ -499,8 +659,11 @@ export function nameMolecule(mol) {
     // todos los grupos principales deben caber en la cadena elegida
     if (principal) {
       let total = 0;
-      for (const c of carbons) {
-        if (fnOf(mol, c) === principal) total += principal === 'alcohol' ? oxygensOf(mol, c).oh.length : 1;
+      if (principal === 'amina') {
+        // cada N de amina es UN grupo, aunque cuelguen de él varios carbonos (amina secundaria/terciaria)
+        total = mol.atoms.filter((a) => a.el === 'N' && !isAmideN(mol, a.id)).length;
+      } else {
+        for (const c of carbons) total += fnCount(mol, c, principal);
       }
       if (total !== model.fnLocs.length) {
         throw new Unsupported('Hay grupos funcionales principales que no caben en una sola cadena: todavía no se pueden nombrar.');
@@ -510,16 +673,7 @@ export function nameMolecule(mol) {
     const systematic = shortest(mol, model, 'escolar');
     const iupac2013 = shortest(mol, model, 'iupac');
 
-    // forma radicofuncional: solo halogenuros de alquilo con un único halógeno
-    let radicofuncional = null;
-    const halos = mol.atoms.filter((a) => HALOGENS.includes(a.el));
-    const onlyHalide = !mol.atoms.some((a) => a.el === 'O') && !mol.bonds.some((b) => b.order > 1);
-    if (halos.length === 1 && onlyHalide) {
-      const h = halos[0].id;
-      const c = mol.neighbors(h)[0].id;
-      const r = radicalName(mol, c, h);
-      radicofuncional = `${HALIDE_CANON[halos[0].el]} de ${r.text}o`;
-    }
+    const radicofuncional = radicofuncionalOf(mol);
     return { ok: true, systematic, iupac2013, radicofuncional, model, chain: model.path };
   } catch (e) {
     if (e instanceof Unsupported) return { ok: false, reason: e.message };
@@ -545,7 +699,14 @@ export function diagnose(ast, mol, typedChain) {
   if (!canon.ok) return [];
   /** @type {Diagnostic[]} */
   const out = [];
-  const typed = modelFor(mol, typedChain);
+  /** @type {Model} */
+  let typed;
+  try {
+    typed = modelFor(mol, typedChain);
+  } catch (e) {
+    if (e instanceof Unsupported) return []; // la cadena escrita no se puede describir: no se compara
+    throw e;
+  }
   const correct = canon.systematic;
 
   if (typed.fnLocs.length < canon.model.fnLocs.length) {
@@ -576,7 +737,12 @@ export function diagnose(ast, mol, typedChain) {
   const full = (m) => `${sig(m.subs)}#${m.fnLocs.join()}#${m.unsatLocs.join()}`;
   if (full(typed) !== full(canon.model)) {
     const reversed = [...typedChain].reverse();
-    const sameChainReversed = full(modelFor(mol, reversed)) === full(canon.model);
+    let sameChainReversed = false;
+    try {
+      sameChainReversed = full(modelFor(mol, reversed)) === full(canon.model);
+    } catch (e) {
+      if (!(e instanceof Unsupported)) throw e;
+    }
     if (sameChainReversed) {
       out.push({
         type: 'numeracion',

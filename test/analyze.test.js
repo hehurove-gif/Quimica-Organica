@@ -43,7 +43,7 @@ test('estados: nunca devuelve estructura si no es válido', () => {
     ['7-bromohexano', 'invalido'],
     ['1,1,1,1-tetrabromoetano', 'invalido'],
     ['propanol', 'incompleto'], // 1 o 2: moléculas distintas
-    ['etilamina', 'fuera_de_alcance'],
+    ['propanonitrilo', 'fuera_de_alcance'], // nitrilos: todavía no
     ['2-penteno-1-eno', 'invalido'],
   ];
   for (const [t, st] of casos) {
