@@ -11,8 +11,48 @@ const SUB = '₀₁₂₃₄₅₆₇₈₉';
 const sub = (n) => (n > 1 ? String(n).split('').map((d) => SUB[Number(d)]).join('') : '');
 
 /**
- * Texto de un carbono con sus hidrógenos, halógenos y oxígenos "compactos":
- * CH₂, CHBr₂, CCl₃, CH₂OH, CH(OH), C(=O), CHO, COOH.
+ * Heteroátomos "con cola": un O con dos enlaces (éter/éster) o un N con más de uno (amina
+ * sustituida, amida sustituida). Se escriben como grupos aparte (R–O–R′, R–NH–R′), no compactos.
+ * @param {Molecule} mol
+ * @param {number} id
+ * @param {number[]} exclude
+ * @returns {number[]}
+ */
+function heteroKids(mol, id, exclude) {
+  return mol.neighbors(id)
+    .filter((nb) => !exclude.includes(nb.id))
+    .filter((nb) => {
+      const el = mol.element(nb.id);
+      return (el === 'O' || el === 'N') && mol.neighbors(nb.id).length > 1;
+    })
+    .map((nb) => nb.id);
+}
+
+/**
+ * Texto lineal de un sustituyente que cuelga de `parent` por el átomo `id` (carbono, halógeno, O o N):
+ * "CH(CH₃)–CH₃", "OCH₃", "NH₂", "NHCH₃", "N(CH₃)CH₃".
+ * @param {Molecule} mol
+ * @param {number} id
+ * @param {number} parent
+ * @returns {string}
+ */
+function subText(mol, id, parent) {
+  const el = mol.element(id);
+  if (el === 'C') return branchText(mol, id, parent);
+  if (HALOGENS.includes(el)) return el;
+  const kids = mol.neighbors(id).map((n) => n.id).filter((k) => k !== parent);
+  if (el === 'O') return kids.length ? `O${subText(mol, kids[0], id)}` : 'OH';
+  const h = mol.implicitH(id);
+  const head = `N${h ? `H${sub(h)}` : ''}`;
+  const texts = kids.map((k) => subText(mol, k, id));
+  if (texts.length === 0) return head;
+  if (texts.length === 1) return `${head}${texts[0]}`;
+  return `${head}(${texts[0]})${texts[1]}`;
+}
+
+/**
+ * Texto de un carbono con sus hidrógenos, halógenos y heteroátomos "compactos":
+ * CH₂, CHBr₂, CCl₃, CH₂OH, CH(OH), CH₂NH₂, C(=O), CHO, COOH, CONH₂.
  * @param {Molecule} mol
  * @param {number} id
  * @param {number[]} skip vecinos que no se escriben aquí (cadena / padre / ramas de carbono)
@@ -24,13 +64,19 @@ function carbonText(mol, id, skip, where = 'inner') {
   const halos = {};
   let oxo = 0;
   let oh = 0;
+  let nh2 = 0;
   for (const nb of mol.neighbors(id)) {
     if (skip.includes(nb.id)) continue;
     const el = mol.element(nb.id);
+    const deg = mol.neighbors(nb.id).length;
     if (HALOGENS.includes(el)) halos[el] = (halos[el] || 0) + 1;
     else if (el === 'O') {
+      if (deg > 1) continue; // éter/éster: se escribe aparte (heteroKids)
       if (nb.order === 2) oxo++;
       else oh++;
+    } else if (el === 'N') {
+      if (deg > 1) continue; // N sustituido: se escribe aparte
+      nh2++;
     }
   }
   const hText = h ? `H${sub(h)}` : '';
@@ -40,9 +86,12 @@ function carbonText(mol, id, skip, where = 'inner') {
     .join('');
   const carbonNbrs = mol.neighbors(id).filter((x) => mol.element(x.id) === 'C').length;
   if (oxo === 1 && oh === 1 && !xText) return h ? 'HCOOH' : where === 'start' ? 'HOOC' : 'COOH'; // ácido carboxílico
-  if (oxo === 1 && oh === 0 && !xText && carbonNbrs <= 1) {
+  if (oxo === 1 && oh === 0 && !xText && carbonNbrs <= 1 && nh2 === 0) {
     if (h === 1) return where === 'start' ? 'OHC' : 'CHO'; // aldehído
     if (h === 2) return 'HCHO'; // metanal
+  }
+  if (oxo === 1 && nh2 === 1 && oh === 0 && !xText && carbonNbrs <= 1) {
+    return where === 'start' ? 'H₂NOC' : `${h ? 'H' : ''}CONH₂`; // amida primaria
   }
   let t = `C${hText}${xText}`;
   if (oxo) t += oxo === 1 ? '(=O)' : `(=O)${sub(oxo)}`;
@@ -51,6 +100,12 @@ function carbonText(mol, id, skip, where = 'inner') {
     if (where === 'start' && single) t = `HO${t}`;
     else if (where === 'end' && single) t += 'OH';
     else t += single ? '(OH)' : `(OH)${sub(oh)}`;
+  }
+  if (nh2) {
+    const single = nh2 === 1 && !oh;
+    if (where === 'start' && single) t = `H₂N${t}`;
+    else if (where === 'end' && single) t += 'NH₂';
+    else t += nh2 === 1 ? '(NH₂)' : `(NH₂)${sub(nh2)}`;
   }
   return t;
 }
@@ -63,12 +118,34 @@ function carbonText(mol, id, skip, where = 'inner') {
  * @returns {string}
  */
 function branchText(mol, id, parent) {
-  const kids = mol.neighbors(id).map((n) => n.id).filter((k) => k !== parent && mol.element(k) === 'C');
+  const carbons = mol.neighbors(id).map((n) => n.id).filter((k) => k !== parent && mol.element(k) === 'C');
+  const hetero = heteroKids(mol, id, [parent]);
+  const kids = [...carbons, ...hetero];
   const base = carbonText(mol, id, [parent, ...kids], kids.length ? 'inner' : 'end');
   if (kids.length === 0) return base;
-  const parts = kids.map((k) => branchText(mol, k, id));
+  const parts = kids.map((k) => subText(mol, k, id));
   const last = parts.pop();
   return `${base}${parts.map((p) => `(${p})`).join('')}–${last}`;
+}
+
+/**
+ * Igual que `branchText`, pero escrito «al revés»: el carbono de unión queda a la derecha, para
+ * los radicales que se dibujan a la izquierda del grupo (CH₃–CH₂–O–…, CH₃–CH(CH₃)–OOC–…).
+ * @param {Molecule} mol
+ * @param {number} id
+ * @param {number} parent
+ * @returns {string}
+ */
+function branchTextRev(mol, id, parent) {
+  const carbons = mol.neighbors(id).map((n) => n.id).filter((k) => k !== parent && mol.element(k) === 'C');
+  const hetero = heteroKids(mol, id, [parent]);
+  const kids = [...carbons, ...hetero];
+  const base = carbonText(mol, id, [parent, ...kids], kids.length ? 'inner' : 'end');
+  if (kids.length === 0) return base;
+  const through = /** @type {number} */ (kids[kids.length - 1]);
+  const rest = kids.slice(0, -1).map((k) => `(${subText(mol, k, id)})`).join('');
+  const head = mol.element(through) === 'C' ? branchTextRev(mol, through, id) : subText(mol, through, id);
+  return `${head}–${base}${rest}`;
 }
 
 /**
@@ -101,6 +178,36 @@ export function compressibleRuns(mol, chain) {
 }
 
 /**
+ * Carbono de un extremo de la cadena con un único éter/éster/amina/amida sustituido.
+ * Al inicio se escribe «al revés» para leerse de izquierda a derecha: CH₃–O–CH₂–…, CH₃–NH–CO–…
+ * @param {Molecule} mol
+ * @param {number} id carbono de la cadena
+ * @param {number} h heteroátomo (O con dos enlaces o N sustituido)
+ * @param {boolean} atStart el carbono es C1 (a la izquierda)
+ * @returns {string}
+ */
+function terminalHetero(mol, id, h, atStart) {
+  const el = mol.element(h);
+  // al inicio el radical «de paso» se escribe al revés (el carbono de unión queda junto al grupo)
+  const kidIds = mol.neighbors(h).map((x) => x.id).filter((k) => k !== id);
+  const kids = kidIds.map((k, j) => (atStart && j === kidIds.length - 1 && mol.element(k) === 'C' ? branchTextRev(mol, k, h) : subText(mol, k, h)));
+  const carbonyl = mol.neighbors(id).some((nb) => nb.order === 2 && mol.element(nb.id) === 'O');
+  const hasH = mol.implicitH(id) > 0 ? 'H' : '';
+  if (el === 'O') {
+    const r = kids[0];
+    if (carbonyl) return atStart ? `${r}–OOC` : `${hasH}COO–${r}`; // éster
+    const c = carbonText(mol, id, [h], atStart ? 'start' : 'end');
+    return atStart ? `${r}–O–${c}` : `${c}–O–${r}`;
+  }
+  // nitrógeno con uno o dos radicales: NH–R  /  N(R)–R′
+  const nPart = kids.length === 1 ? 'NH' : `N(${kids[0]})`;
+  const tail = kids.length === 1 ? kids[0] : kids[1];
+  const c = carbonyl ? 'CO' : carbonText(mol, id, [h], atStart ? 'start' : 'end');
+  if (atStart) return `${tail}–${nPart}–${c}`;
+  return carbonyl ? `${hasH}CO${nPart}–${tail}` : `${c}–${nPart}–${tail}`;
+}
+
+/**
  * Fórmula semidesarrollada en una línea, siguiendo la cadena dada.
  * @param {Molecule} mol
  * @param {number[]} chain
@@ -123,16 +230,22 @@ export function semidesarrollada(mol, chain, opts = {}) {
     const others = mol.neighbors(id).map((x) => x.id).filter((x) => x !== prev && x !== next);
     const carbonBranches = others.filter((x) => mol.element(x) === 'C');
     const halos = others.filter((x) => HALOGENS.includes(mol.element(x)));
+    const hetero = heteroKids(mol, id, [prev, next]);
     const isEnd = n > 1 && (i === 0 || i === n - 1);
     const where = n === 1 ? 'end' : i === 0 ? 'start' : i === n - 1 ? 'end' : 'inner';
-    // extremo con un único halógeno: se escribe como grupo aparte: Br–CH₂–… / …–CH₂–Br
-    if (isEnd && carbonBranches.length === 0 && halos.length === 1 && others.length === 1) {
+    const atStart = i === 0 && n > 1;
+    if ((isEnd || n === 1) && hetero.length === 1 && carbonBranches.length === 0 && halos.length === 0) {
+      // éter, éster, amina o amida sustituida en un extremo: R–O–CH₂–… / …–CH₂–NH–R / …–COO–R
+      parts[i] = terminalHetero(mol, id, hetero[0], atStart);
+    } else if (isEnd && carbonBranches.length === 0 && halos.length === 1 && others.length === 1) {
       const x = mol.element(halos[0]);
       const c = carbonText(mol, id, halos);
       parts[i] = i === 0 ? `${x}–${c}` : `${c}–${x}`;
     } else {
-      const base = carbonText(mol, id, carbonBranches, where);
-      parts[i] = base + carbonBranches.map((b) => `(${branchText(mol, b, id)})`).join('');
+      const base = carbonText(mol, id, [...carbonBranches, ...hetero], where);
+      parts[i] = base
+        + carbonBranches.map((b) => `(${branchText(mol, b, id)})`).join('')
+        + hetero.map((h) => `(${subText(mol, h, id)})`).join('');
     }
   });
   const runs = opts.compress ? compressibleRuns(mol, chain) : [];
