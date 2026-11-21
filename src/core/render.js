@@ -47,6 +47,7 @@ function subText(mol, id, parent) {
   const texts = kids.map((k) => subText(mol, k, id));
   if (texts.length === 0) return head;
   if (texts.length === 1) return `${head}${texts[0]}`;
+  if (texts[0] === texts[1]) return `${head}(${texts[0]})${sub(2)}`;
   return `${head}(${texts[0]})${texts[1]}`;
 }
 

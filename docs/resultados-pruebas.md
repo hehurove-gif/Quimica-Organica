@@ -6,9 +6,9 @@ Fecha: 2026-11-21 (v0.2: 2026-11-18) · Comandos: `npm test`, `npm run typecheck
 
 | Comprobación | Resultado |
 |---|---|
-| `npm test` | 221 pruebas: **221 pasan, 0 fallan, 0 `todo`** |
+| `npm test` | 232 pruebas: **232 pasan, 0 fallan, 0 `todo`** |
 | `npm run typecheck` | limpio |
-| `tools/check_golden.py` (fórmulas calculadas aparte, en Python) | 115 compuestos, 215 nombres, **0 discrepancias** |
+| `tools/check_golden.py` (fórmulas calculadas aparte, en Python) | 118 compuestos, 222 nombres, **0 discrepancias** |
 | UI en Chrome headless | alqueno+alcohol, ácido, incompleto y fuera de alcance se muestran como se espera (captura revisada a mano) |
 
 ## Matriz plan → ejecución
@@ -37,7 +37,7 @@ Fecha: 2026-11-21 (v0.2: 2026-11-18) · Comandos: `npm test`, `npm run typecheck
 - **Cinco pruebas antiguas** afirmaban «fuera de alcance» para éteres, ésteres, aminas y amidas. Se reescribieron con casos que siguen sin soporte (nitrilos, tioles, anhídridos, urea, ciclos, imidas, peróxidos); ninguna aserción se relajó.
 - **Colisión de dibujo conocida:** en moléculas muy ramificadas (p. ej. `2,5-dimetil-3-secbutoxihexano`) un radical grande de C3 puede encimarse con el metilo de C5. El layout es simple (zigzag + ramas); no se corrige en esta etapa y lo cubre la prueba de «sin átomos encimados» solo en casos sencillos.
 - **Contradicciones entre las presentaciones de clase y el sistema (a revisar con el profesor):**
-  1. Las aminas secundarias y terciarias se nombran en clase `2-(metilamino)propano` / `1-(etilmetilamino)butano` (amino sustituido como prefijo). El parser aún no lo lee; el sistema genera `N-metilpropan-2-amina`.
+  1. Las aminas secundarias y terciarias se nombran en clase `2-(metilamino)propano` / `1-(etilmetilamino)butano` (amino sustituido como prefijo). **Resuelto:** ya se leen (`test/nsub-t10.test.js`) y también se generan como prefijo, p. ej. `ácido 2-(metilamino)propanoico`; para una amina simple el sistema devuelve la forma `N-metil-2-propanamina`.
   2. Varios ejemplos de clase no respetan el orden alfabético de los prefijos (`2,4-dimetil-2-aminohexano`, `4-etil-2,2-dimetil-3-bromohexano`, `3-etil-6-metil-5-isopentil-4-aminononano`); el sistema los marca con aviso y propone el orden correcto.
   3. `BUTOXIBUTANO` se escribe sin localizador en clase; aquí es incompleto (`1-` o `2-butoxibutano` son moléculas distintas).
   4. Las amidas aparecen como `butanoamida`; se leen, pero el nombre que se genera es `butanamida`.

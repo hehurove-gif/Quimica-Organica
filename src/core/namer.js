@@ -237,7 +237,24 @@ function subsOf(mol, path, attachedTo, principal = null) {
         }
         if (cls === 'amina' && principal === 'amina') continue; // parte del sufijo -amina
         if (mol.neighbors(nb.id).length > 1) {
-          throw new Inviable('Una amina sustituida (metilamino, dimetilamino…) como sustituyente todavía no se puede nombrar.');
+          // amino sustituido: «(metilamino)», «(etilmetilamino)», «(dimetilamino)»
+          const others = mol.neighbors(nb.id).filter((x) => x.id !== id);
+          if (others.some((x) => mol.element(x.id) !== 'C' || isAcylC(mol, x.id))) {
+            throw new Inviable('Una amina sustituida con acilo u otro heteroátomo (acetamido…) todavía no se puede nombrar.');
+          }
+          const rads = others.map((x) => radicalName(mol, x.id, nb.id));
+          if (rads.some((r) => r.complex)) {
+            throw new Inviable('Una amina sustituida con radicales ramificados como sustituyente todavía no se puede nombrar.');
+          }
+          /** @type {Map<string, number>} */
+          const count = new Map();
+          for (const r of rads) count.set(r.text, (count.get(r.text) || 0) + 1);
+          const parts = [...count.entries()]
+            .sort((x, y) => (sortKeyOf(x[0]) < sortKeyOf(y[0]) ? -1 : sortKeyOf(x[0]) > sortKeyOf(y[0]) ? 1 : 0))
+            .map(([text, k]) => `${k > 1 ? multOf(k) || '' : ''}${text}`);
+          const text = `${parts.join('')}amino`;
+          subs.push({ pos: i + 1, text, sortKey: sortKeyOf(text), complex: true });
+          continue;
         }
         subs.push({ pos: i + 1, text: 'amino', sortKey: 'amino', complex: false });
       } else {

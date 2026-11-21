@@ -260,6 +260,15 @@ function attachSub(mol, carbon, sub) {
     created.push(id);
     return created;
   }
+  if (sub.kind === 'nsub') {
+    const n = mol.addAtom('N');
+    mol.addBond(carbon, n);
+    created.push(n);
+    for (const t of sub.terms) {
+      for (let i = 0; i < t.mult; i++) created.push(...attachSub(mol, n, { kind: 'radical', radical: t.radical, text: t.text }));
+    }
+    return created;
+  }
   if (sub.kind === 'alkoxy') {
     const o = mol.addAtom('O');
     mol.addBond(carbon, o);

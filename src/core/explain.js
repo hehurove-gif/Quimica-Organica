@@ -271,6 +271,15 @@ export function explain(ast, built, mol, canon) {
         atomIds: t.atomIds,
         spans,
       });
+    } else if (g.sub.kind === 'nsub') {
+      const radicales = g.sub.terms.reduce((acc, t) => acc + t.mult, 0);
+      const clase = radicales === 1 ? 'secundaria' : 'terciaria';
+      steps.push({
+        title: `Sustituyente «${g.sub.text}»`,
+        text: `Un grupo amino sustituido: un nitrógeno se une ${where} y lleva ${radicales === 1 ? 'un radical' : `${COUNT[radicales] || radicales} radicales`} (${g.sub.terms.map((t) => (t.mult > 1 ? `${COUNT[t.mult] || t.mult} ` : '') + t.text).join(', ')}). Con la cadena a un lado y ${radicales === 1 ? 'ese radical' : 'esos radicales'} al otro, es una amina ${clase}; en la nomenclatura moderna se nombra como N-sustituida.`,
+        atomIds: t.atomIds,
+        spans,
+      });
     } else {
       const sub = g.sub;
       const r = sub.radical;

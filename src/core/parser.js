@@ -28,7 +28,8 @@ import {
  * @typedef {{ kind: 'halo', el: string, text: string, canon: string }
  *   | { kind: 'func', fg: 'hidroxi' | 'oxo' | 'amino', text: string }
  *   | { kind: 'radical', radical: Radical, text: string, common?: string }
- *   | { kind: 'alkoxy', radical: Radical, text: string, common?: string }} Sub
+ *   | { kind: 'alkoxy', radical: Radical, text: string, common?: string }
+ *   | { kind: 'nsub', terms: RadicalTerm[], text: string }} Sub
  * @typedef {{
  *   locants: number[] | null, mult: number | null, sub: Sub,
  *   span: Span | null, locSpan: Span | null, multSpan: Span | null, subSpan: Span | null,
@@ -245,6 +246,34 @@ const parenP = (mode) => (ctx, pos) => {
   return { pos: close.pos, value: sub };
 };
 
+/**
+ * Amino sustituido entre paréntesis: «(metilamino)», «(etilmetilamino)», «(dimetilamino)».
+ * Es como se nombran en clase las aminas secundarias y terciarias («2-(metilamino)propano»).
+ * @type {import('./peg.js').P}
+ */
+const nsubP = (ctx, pos) => {
+  const open = lit('(')(ctx, pos);
+  if (!open) return null;
+  /** @type {RadicalTerm[]} */
+  const terms = [];
+  let p = ws(ctx, open.pos).pos;
+  for (;;) {
+    const t = radTermP(ctx, p);
+    if (!t) break;
+    terms.push(t.value);
+    p = t.pos;
+  }
+  if (!terms.length) return null;
+  const am = lit('amino', 'la terminación -amino')(ctx, p);
+  if (!am) return null;
+  p = ws(ctx, am.pos).pos;
+  const close = lit(')', 'el paréntesis de cierre «)»')(ctx, p);
+  if (!close) return null;
+  /** @type {Sub} */
+  const sub = { kind: 'nsub', terms, text: ctx.input.slice(pos, close.pos) };
+  return { pos: close.pos, value: sub };
+};
+
 /** Un radical leído en modo «oxi» pasa a ser un alcoxi. @param {import('./peg.js').Ok | null} r */
 function asAlkoxy(r) {
   if (!r) return null;
@@ -269,6 +298,8 @@ const subP = (ctx, pos) => {
     const sub = { kind: 'func', fg: /** @type {'hidroxi' | 'oxo' | 'amino'} */ (f.value), text: f.value };
     return { pos: f.pos, value: sub };
   }
+  const ns = nsubP(ctx, pos);
+  if (ns) return ns;
   const ax = asAlkoxy(choice(commonRadicalP('oxi'), parenP('oxi'), stemRadicalP('oxi'))(ctx, pos));
   if (ax) return ax;
   return choice(commonRadicalP('il'), parenP('il'), stemRadicalP('il'))(ctx, pos);
