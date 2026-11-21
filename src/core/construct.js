@@ -120,6 +120,59 @@ export function draftToSmiles(d) {
   return s;
 }
 
+/** Clave de la rama que sale de `from` por `to`: orden del enlace + subárbol. */
+const branchKey = (/** @type {import('./molecule.js').Molecule} */ mol, /** @type {number} */ from, /** @type {number} */ to) => {
+  const bd = mol.bonds.find((x) => (x.a === from && x.b === to) || (x.a === to && x.b === from));
+  return `${bd ? bd.order : 1}${mol._rooted(to, from, '')}`;
+};
+
+/** @type {Map<string, string>} clave de rama -> grupo del catálogo */
+const CATALOG_KEYS = (() => {
+  /** @type {Map<string, string>} */
+  const map = new Map();
+  for (const g of GROUPS) {
+    const m = fromSmiles(`C(${g.smiles})`);
+    const root = 0;
+    const nb = m.neighbors(root)[0];
+    map.set(branchKey(m, root, nb.id), g.kind);
+  }
+  return map;
+})();
+
+/**
+ * Molécula + cadena dibujada -> borrador, para llevar al constructor lo que se escribió como nombre.
+ * Devuelve null si algo no se puede expresar con el catálogo (cadena de más de 10 carbonos, grupos
+ * o radicales que el constructor no ofrece).
+ * @param {import('./molecule.js').Molecule} mol @param {number[]} chain
+ * @returns {Draft | null}
+ */
+export function moleculeToDraft(mol, chain) {
+  if (chain.length < 1 || chain.length > MAX_CHAIN) return null;
+  if (chain.some((id) => mol.element(id) !== 'C')) return null;
+  /** @type {(1 | 2 | 3)[]} */
+  const bonds = [];
+  for (let i = 1; i < chain.length; i++) {
+    const bd = mol.bonds.find((x) => (x.a === chain[i - 1] && x.b === chain[i]) || (x.a === chain[i] && x.b === chain[i - 1]));
+    if (!bd) return null;
+    bonds.push(/** @type {1 | 2 | 3} */ (bd.order));
+  }
+  /** @type {DraftGroup[]} */
+  const groups = [];
+  const inChain = new Set(chain);
+  let covered = chain.length;
+  for (let i = 0; i < chain.length; i++) {
+    for (const nb of mol.neighbors(chain[i])) {
+      if (inChain.has(nb.id)) continue;
+      const kind = CATALOG_KEYS.get(branchKey(mol, chain[i], nb.id));
+      if (!kind) return null;
+      groups.push({ pos: i + 1, kind });
+      covered += fromSmiles(`C(${/** @type {{ smiles: string }} */ (GROUPS.find((g) => g.kind === kind)).smiles})`).atoms.length - 1;
+    }
+  }
+  if (covered !== mol.atoms.length) return null;
+  return { n: chain.length, bonds, groups };
+}
+
 /**
  * Borrador -> molécula -> nombre. Nunca devuelve un nombre que no reconstruya la misma molécula.
  * @param {Draft} d

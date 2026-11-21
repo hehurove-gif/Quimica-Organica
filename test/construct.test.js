@@ -149,3 +149,33 @@ test('verifica: vacío, sin entender, incompleto y estructura inválida', () => 
   const mala = mk(3, [[2, '=O']], [[1, 2]]);
   assert.equal(verify(mala, 'propanona').verdict, 'sin_estructura');
 });
+
+/* ------------- nombre -> constructor (sincronía en el otro sentido) ------------- */
+import { readFileSync } from 'node:fs';
+import { moleculeToDraft } from '../src/core/construct.js';
+import { analyze } from '../src/core/analyze.js';
+
+test('sincronía: lo que se escribe como nombre se puede llevar al constructor y vuelve igual', () => {
+  const ORO = JSON.parse(readFileSync(new URL('./oro.json', import.meta.url), 'utf8'));
+  let llevados = 0;
+  /** @type {string[]} */
+  const fallos = [];
+  for (const c of ORO) {
+    const a = analyze(c.nombre);
+    if (a.status !== 'valido' || !a.molecule) continue;
+    const d = moleculeToDraft(a.molecule, a.chain);
+    if (!d) continue;
+    llevados++;
+    const r = describe(d);
+    if (r.status !== 'valido' || r.molecule?.canonicalKey() !== a.molecule.canonicalKey()) fallos.push(c.nombre);
+  }
+  assert.deepEqual(fallos, []);
+  assert.ok(llevados >= 100, `solo ${llevados} compuestos se llevaron al constructor`);
+});
+
+test('sincronía: lo que el constructor no ofrece devuelve null (no se inventa)', () => {
+  const a = analyze('3-etil-6-metil-5-isopentil-4-aminononano'); // radical isopentil: no está en el catálogo
+  assert.equal(moleculeToDraft(/** @type {any} */ (a.molecule), a.chain), null);
+  const largo = analyze('undecano');
+  assert.equal(moleculeToDraft(/** @type {any} */ (largo.molecule), largo.chain), null);
+});

@@ -20,7 +20,11 @@ También se puede abrir con un nombre precargado: `http://localhost:8080/?q=brom
 - Dibuja la estructura semidesarrollada y resalta qué parte del nombre corresponde a qué átomos.
 - Muestra el nombre canónico, la forma radicofuncional y la fórmula molecular.
 
-Alcance actual: alcanos, radicales alquilo y halogenuros. Ver `docs/`.
+## Constructor y «verifica mi respuesta» (v0.3)
+
+La pestaña **Construir y verificar** arma una estructura sin escribir el nombre: se elige cuántos carbonos tiene la cadena (1–10), el orden de cada enlace y los grupos de cada carbono (halógenos, –OH, =O, éteres, aminas, radicales). El nombre, el dibujo y los pasos salen de las mismas reglas que el otro modo. Con un nombre propio escrito en el cuadro, el sistema compara **la estructura** (no el texto) y dice si es correcto, un isómero o una molécula distinta. El «modo práctica» oculta la respuesta hasta acertar o pedirla. Lo que se escribe como nombre también se puede llevar al constructor, y viceversa.
+
+Alcance actual: alcanos, alquenos, alquinos, halogenuros, alcoholes, éteres, aldehídos, cetonas, ácidos, ésteres, aminas y amidas. Ver `docs/`.
 
 ## Documentación
 

@@ -42,7 +42,7 @@ Estado: ✅ implementado y ejecutado · ⏳ pendiente (prueba escrita como `todo
 | T8 | `render.js` | Enlaces dobles/triples, etiquetas `OH`/`HO`, `CHO`, `COOH`, `CO`; sin solapamiento | texto semidesarrollado exacto + geometría | texto esperado | ✅ |
 | T9 | UI | Estados visibles, ejemplos, render con funciones | Chrome headless, volcado del DOM + captura (manual, no automatizado en `npm test`; consola no auditada) | DOM | 🟡 |
 | T10 | Éteres, ésteres, aminas, amidas | `build` (nombre → estructura), `explain`, `namer` (estructura → nombre) y `render` | `build-t10` (SMILES de referencia), `explain-t10`, `namer-t10` (ida y vuelta), `render-t10` (texto + conteo de C/N/O/H + SVG), 30 compuestos nuevos en la tabla de oro | nombres de las presentaciones de clase + SMILES escritos a mano | ✅ |
-| T11 | Constructor visual / «verifica mi respuesta» | Edición ↔ modelo ↔ nombre | — | — | 🔲 |
+| T11 | Constructor visual / «verifica mi respuesta» | borrador ↔ molécula ↔ nombre; veredicto por grafo; sincronía en los dos sentidos con «Nombre → estructura» | `construct.test.js` (15 casos con SMILES y nombre escritos a mano, barrido de valencias, veredictos, ida y vuelta con la tabla de oro) + `tools/smoke-ui.mjs` (Chrome real, manual) | SMILES y nombres escritos a mano | ✅ núcleo / 🟡 UI manual |
 
 ### Casos de T10 (ya ejecutados, antes reservados como `todo`)
 

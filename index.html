@@ -13,7 +13,12 @@
     <p class="sub">Escribe un nombre y mira la estructura. Todo se calcula con reglas, sin IA.</p>
   </header>
 
-  <main>
+  <nav class="vistas" role="tablist" aria-label="Modo">
+    <button type="button" role="tab" id="tab-nombre" aria-selected="true" aria-controls="vista-nombre">Nombre → estructura</button>
+    <button type="button" role="tab" id="tab-constructor" aria-selected="false" aria-controls="vista-constructor">Construir y verificar</button>
+  </nav>
+
+  <main id="vista-nombre" role="tabpanel" aria-labelledby="tab-nombre">
     <section class="entrada" aria-labelledby="lbl">
       <label id="lbl" for="nombre">Nombre del compuesto</label>
       <input id="nombre" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
@@ -45,6 +50,7 @@
           <h2>Estructura semidesarrollada</h2>
           <label class="chk"><input id="loc" type="checkbox" checked> Mostrar numeración</label>
           <label class="chk" title="Escribe las tiras largas de CH₂ como (CH₂)ₙ"><input id="comp" type="checkbox"> Comprimir CH₂ → (CH₂)ₙ</label>
+          <button type="button" id="a-constructor" class="btn" hidden>Abrir en el constructor</button>
         </div>
         <div id="svg" class="svg"></div>
         <p id="semi" class="semi"></p>
@@ -67,8 +73,64 @@
     </div>
   </main>
 
+  <main id="vista-constructor" role="tabpanel" aria-labelledby="tab-constructor" hidden>
+    <section class="entrada" aria-labelledby="c-lbl">
+      <label id="c-lbl" for="c-n">Carbonos de la cadena principal: <output id="c-n-out">4</output></label>
+      <input id="c-n" type="range" min="1" max="10" value="4">
+      <p class="ayuda">Elige cuántos carbonos tiene la cadena, cambia los enlaces entre ellos y agrega grupos a cada carbono. Para un ácido, agrega «=O» y «–OH» al mismo carbono.</p>
+      <div id="c-cadena" class="cadena" role="group" aria-label="Cadena de carbonos"></div>
+      <div class="ejemplos" role="group" aria-label="Ejemplos del constructor">
+        <span>Prueba:</span>
+        <button type="button" data-cej="0">2-propanol</button>
+        <button type="button" data-cej="1">ácido 2-aminopropanoico</button>
+        <button type="button" data-cej="2">3-bromo-2,5-dimetilhexano</button>
+        <button type="button" data-cej="3">etanoato de metilo</button>
+        <button type="button" data-cej="4">3-buten-1-ol</button>
+        <button type="button" id="c-limpiar" class="btn">Empezar de nuevo</button>
+      </div>
+    </section>
+
+    <div id="c-estado" class="estado" role="status" aria-live="polite"></div>
+
+    <div id="c-resultado" hidden>
+      <section class="dibujo" aria-label="Estructura">
+        <div class="barra">
+          <h2>Estructura</h2>
+          <label class="chk"><input id="c-loc" type="checkbox" checked> Mostrar numeración</label>
+        </div>
+        <div id="c-svg" class="svg"></div>
+        <p id="c-semi" class="semi"></p>
+      </section>
+
+      <section aria-label="Verifica tu respuesta">
+        <h2>Verifica tu respuesta</h2>
+        <label for="c-nombre">¿Cómo se llama esta estructura?</label>
+        <input id="c-nombre" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Escribe tu nombre y lo comparo con la estructura">
+        <div id="c-veredicto" class="veredicto" role="status" aria-live="polite"></div>
+        <label class="chk"><input id="c-practica" type="checkbox"> Modo práctica: ocultar el nombre hasta acertar o pedir la respuesta</label>
+        <button type="button" id="c-revelar" class="btn" hidden>Mostrar la respuesta</button>
+      </section>
+
+      <div id="c-respuesta">
+        <section class="nombres" aria-label="Nombres">
+          <h2>Nombres</h2>
+          <dl id="c-nombres"></dl>
+          <button type="button" id="c-a-nombre" class="btn">Ver este nombre en «Nombre → estructura»</button>
+        </section>
+        <section id="c-avisos-sec" aria-label="Observaciones" hidden>
+          <h2>Observaciones</h2>
+          <ul id="c-avisos" class="avisos"></ul>
+        </section>
+        <section aria-label="Explicación paso a paso">
+          <h2>Cómo se construye, paso a paso</h2>
+          <ol id="c-pasos" class="pasos"></ol>
+        </section>
+      </div>
+    </div>
+  </main>
+
   <footer>
-    <p>v0.2 · Alcanos, alquenos, alquinos, halogenuros, alcoholes, aldehídos, cetonas y ácidos; cadenas de hasta 99 carbonos. Éteres, ésteres, aminas y amidas llegan en la siguiente fase.</p>
+    <p>v0.3 · Alcanos, alquenos, alquinos, halogenuros, alcoholes, éteres, aldehídos, cetonas, ácidos, ésteres, aminas y amidas; cadenas de hasta 99 carbonos (el constructor llega a 10).</p>
   </footer>
 
   <script type="module" src="src/ui/app.js"></script>

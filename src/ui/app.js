@@ -1,6 +1,9 @@
 // @ts-check
 import { analyze } from '../core/analyze.js';
 import { renderSvg, semidesarrollada } from '../core/render.js';
+import { moleculeToDraft } from '../core/construct.js';
+import { showView } from './vistas.js';
+import { loadDraft } from './constructor.js';
 
 const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
 const input = /** @type {HTMLInputElement} */ ($('nombre'));
@@ -119,6 +122,8 @@ function update() {
     return;
   }
   $('resultado').hidden = false;
+  const aCons = $('a-constructor');
+  aCons.hidden = !moleculeToDraft(a.molecule, a.chain);
   renderDrawing();
   renderSemi();
 
@@ -171,6 +176,17 @@ document.querySelectorAll('[data-ej]').forEach((b) =>
     update();
   }),
 );
+$('a-constructor').addEventListener('click', () => {
+  if (!current || !current.molecule) return;
+  const d = moleculeToDraft(current.molecule, current.chain);
+  if (!d) return;
+  loadDraft(d);
+  showView('constructor');
+});
+document.addEventListener('abrir-nombre', (e) => {
+  input.value = /** @type {CustomEvent<string>} */ (e).detail;
+  update();
+});
 const params = new URLSearchParams(location.search);
 input.value = params.get('q') ?? '5-fluoro-2-metil-1-yodohexano';
 compChk.checked = params.get('comp') === '1';
