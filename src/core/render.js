@@ -283,8 +283,45 @@ const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, 
  * @returns {Map<number, Pt>}
  */
 export function layout(mol, chain, L, hidden = new Set()) {
+  const first = layoutWith(mol, chain, L, hidden, []);
+  let best = first;
+  let bestN = collisions(first.pos, L);
+  if (bestN === 0) return first.pos;
+  // Hay átomos encimados: probar a girar, rama por rama, el lado hacia el que se doblan.
+  const k = Math.min(first.branched, 10);
+  for (let mask = 1; mask < 1 << k && bestN > 0; mask++) {
+    const flips = Array.from({ length: k }, (_, b) => (mask & (1 << b) ? -1 : 1));
+    const cand = layoutWith(mol, chain, L, hidden, flips);
+    const c = collisions(cand.pos, L);
+    if (c < bestN) { best = cand; bestN = c; }
+  }
+  return best.pos;
+}
+
+/**
+ * Pares de átomos a menos de 0.55 enlaces de distancia (se verían encimados).
+ * @param {Map<number, Pt>} pos @param {number} L
+ */
+function collisions(pos, L) {
+  const pts = [...pos.values()];
+  let c = 0;
+  for (let i = 0; i < pts.length; i++) {
+    for (let j = i + 1; j < pts.length; j++) {
+      if (Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y) < 0.55 * L) c++;
+    }
+  }
+  return c;
+}
+
+/**
+ * Layout base. `flips[b]` invierte el giro de la b-ésima rama ramificada (por defecto 1).
+ * @param {Molecule} mol @param {number[]} chain @param {number} L @param {Set<number>} hidden @param {number[]} flips
+ * @returns {{ pos: Map<number, Pt>, branched: number }}
+ */
+function layoutWith(mol, chain, L, hidden, flips) {
   /** @type {Map<number, Pt>} */
   const pos = new Map();
+  let branches = 0;
   const dx = L * Math.cos(Math.PI / 6);
   const dy = L * Math.sin(Math.PI / 6);
   const yOf = (/** @type {number} */ i) => (((i % 2) + 2) % 2 === 0 ? 0 : dy);
@@ -299,6 +336,7 @@ export function layout(mol, chain, L, hidden = new Set()) {
     const p = { x: from.x + L * Math.cos(a), y: from.y + L * Math.sin(a) };
     pos.set(id, p);
     const kids = mol.neighbors(id).map((k) => k.id).filter((k) => k !== parent);
+    if (kids.length) flip *= flips[branches++] ?? 1;
     const t = Math.PI / 3;
     /** @type {number[]} */
     let angles = [];
@@ -335,7 +373,7 @@ export function layout(mol, chain, L, hidden = new Set()) {
       place(s, id, here, a, flip);
     });
   });
-  return pos;
+  return { pos, branched: branches };
 }
 
 /**

@@ -6,7 +6,7 @@ Fecha: 2026-11-21 (v0.2: 2026-11-18) · Comandos: `npm test`, `npm run typecheck
 
 | Comprobación | Resultado |
 |---|---|
-| `npm test` | 241 pruebas: **241 pasan, 0 fallan, 0 `todo`** |
+| `npm test` | 252 pruebas: **252 pasan, 0 fallan, 0 `todo`** |
 | `npm run typecheck` | limpio |
 | `tools/check_golden.py` (fórmulas calculadas aparte, en Python) | 118 compuestos, 223 nombres, **0 discrepancias** |
 | UI en Chrome headless | alqueno+alcohol, ácido, incompleto y fuera de alcance se muestran como se espera (captura revisada a mano) |
@@ -35,7 +35,7 @@ Fecha: 2026-11-21 (v0.2: 2026-11-18) · Comandos: `npm test`, `npm run typecheck
 - **Regresión propia, corregida:** al rechazar `0` como localizador en el parser (para no confundirlo con `N`) rompí `0-bromohexano`, que debe dar «el localizador 0 no existe». `N` ahora es el valor interno −1.
 - **Error previo de las explicaciones:** el conteo de carbonos de un radical ramificado usaba solo su cadena base («isobutil: 3 carbonos»; son 4). Corregido para todos los radicales.
 - **Cinco pruebas antiguas** afirmaban «fuera de alcance» para éteres, ésteres, aminas y amidas. Se reescribieron con casos que siguen sin soporte (nitrilos, tioles, anhídridos, urea, ciclos, imidas, peróxidos); ninguna aserción se relajó.
-- **Colisión de dibujo conocida:** en moléculas muy ramificadas (p. ej. `2,5-dimetil-3-secbutoxihexano`) un radical grande de C3 puede encimarse con el metilo de C5. El layout es simple (zigzag + ramas); no se corrige en esta etapa y lo cubre la prueba de «sin átomos encimados» solo en casos sencillos.
+- **Colisión de dibujo (corregida):** en moléculas muy ramificadas (p. ej. `2,5-dimetil-3-secbutoxihexano`) un radical grande de C3 se encimaba con el metilo de C5. El layout ahora detecta átomos a menos de 0.55 enlaces y prueba a girar el lado de cada rama (hasta 2¹⁰ combinaciones); lo cubre `test/render-layout.test.js`.
 - **Contradicciones entre las presentaciones de clase y el sistema (a revisar con el profesor):**
   1. Las aminas secundarias y terciarias se nombran en clase `2-(metilamino)propano` / `1-(etilmetilamino)butano` (amino sustituido como prefijo). **Resuelto:** ya se leen (`test/nsub-t10.test.js`) y también se generan como prefijo, p. ej. `ácido 2-(metilamino)propanoico`; para una amina simple el sistema devuelve la forma `N-metil-2-propanamina`.
   2. Varios ejemplos de clase no respetan el orden alfabético de los prefijos (`2,4-dimetil-2-aminohexano`, `4-etil-2,2-dimetil-3-bromohexano`, `3-etil-6-metil-5-isopentil-4-aminononano`); el sistema los marca con aviso y propone el orden correcto.
