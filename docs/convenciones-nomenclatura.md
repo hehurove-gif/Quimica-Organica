@@ -37,8 +37,8 @@ Principio: **leer de forma generosa, escribir de forma estricta.** El parser ace
 ## Decisiones pendientes (a validar con el profesor / programa oficial)
 
 - Estilo de localizador para insaturaciones (`2-buteno` vs `but-2-eno`) y alcoholes (`1-propanol` vs `propan-1-ol`): se decide al implementar esas familias.
-- Éteres: `metoxietano` vs `etil metil éter`.
-- Aminas: `propilamina` vs `propan-1-amina`.
+- ~~Éteres: `metoxietano` vs `etil metil éter`.~~ **Resuelto en v0.3:** se leen y se generan ambas; el nombre principal es el sustitutivo (alcoxi) y el radicofuncional se ofrece como equivalencia.
+- ~~Aminas: `propilamina` vs `propan-1-amina`.~~ **Resuelto en v0.3:** se leen y se generan ambas (`1-propanamina` escolar, `propan-1-amina` IUPAC 2013, `propilamina` radicofuncional).
 
 ## Cadenas largas (v0.2)
 

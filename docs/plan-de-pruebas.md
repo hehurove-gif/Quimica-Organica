@@ -1,7 +1,8 @@
-# Plan de pruebas — v0.2 (módulos de funciones orgánicas)
+# Plan de pruebas — v0.3 (funciones orgánicas + éteres, ésteres, aminas y amidas)
 
 **Alcance de esta etapa:** alquenos, alquinos, alcoholes, aldehídos, cetonas y ácidos carboxílicos (monofuncionales y con prefijos `hidroxi`/`oxo`), más las herramientas que las verifican (lector/escritor SMILES, casos de oro).
-**Siguiente etapa (planeada, ver T10):** éteres, ésteres, aminas, amidas; constructor visual y modo «verifica mi respuesta» (T11).
+**Etapa v0.3 (T10, hecha):** éteres, ésteres, aminas y amidas en los dos sentidos (nombre ↔ estructura), con localizador `N`, formas radicofuncionales y dibujo semidesarrollado.
+**Siguiente etapa (planeada):** constructor visual y modo «verifica mi respuesta» (T11), y lo que las presentaciones de clase usan y aún no se lee (ver «Fuera de alcance conocido» en `resultados-pruebas.md`).
 
 ## 1. Principios
 
@@ -40,15 +41,15 @@ Estado: ✅ implementado y ejecutado · ⏳ pendiente (prueba escrita como `todo
 | T7 | Diagnósticos | Cada criterio de numeración/cadena tiene un mensaje propio | grupo principal, enlace múltiple, prefijos, alfabético, cadena | casos manuales | ✅ |
 | T8 | `render.js` | Enlaces dobles/triples, etiquetas `OH`/`HO`, `CHO`, `COOH`, `CO`; sin solapamiento | texto semidesarrollado exacto + geometría | texto esperado | ✅ |
 | T9 | UI | Estados visibles, ejemplos, render con funciones | Chrome headless, volcado del DOM + captura (manual, no automatizado en `npm test`; consola no auditada) | DOM | 🟡 |
-| T10 | Éteres, ésteres, aminas, amidas | Cobertura de familias restantes | casos listados abajo | — | ✅ (`todo` explícito) |
+| T10 | Éteres, ésteres, aminas, amidas | `build` (nombre → estructura), `explain`, `namer` (estructura → nombre) y `render` | `build-t10` (SMILES de referencia), `explain-t10`, `namer-t10` (ida y vuelta), `render-t10` (texto + conteo de C/N/O/H + SVG), 30 compuestos nuevos en la tabla de oro | nombres de las presentaciones de clase + SMILES escritos a mano | ✅ |
 | T11 | Constructor visual / «verifica mi respuesta» | Edición ↔ modelo ↔ nombre | — | — | 🔲 |
 
-### Casos reservados para T10 (escritos como `todo`)
+### Casos de T10 (ya ejecutados, antes reservados como `todo`)
 
-`metoxietano`, `etoxipropano`, `etanoato de metilo`, `propanoato de etilo`, `metilamina`, `1-propanamina`, `etanamida`, `N-metiletanamida`, `ácido 2-aminopropanoico`.
+`metoxietano`, `etoxipropano` (pide localizador: `1-` o `2-`), `etanoato de metilo`, `propanoato de etilo`, `metilamina`, `1-propanamina`, `etanamida`, `N-metiletanamida`, `ácido 2-aminopropanoico`; más los ejemplos de las presentaciones (`etanoato de isopropilo`, `propanoato de isobutilo`, `butanamida`, `dibutilamina`, `tributilamina`, `2,5-dimetil-3-secbutoxihexano`…).
 
 ## 5. Criterios de entrada y salida
 
 - **Entrada:** módulo implementado con su sección de pruebas escrita **antes** de dar el módulo por terminado.
-- **Salida de la etapa:** T0–T9 en verde, `npm run typecheck` limpio, T10 en estado `todo` explícito (no oculto), documento de resultados (`docs/resultados-pruebas.md`) con la matriz real de lo ejecutado.
+- **Salida de la etapa:** T0–T10 en verde (sin `todo`), `npm run typecheck` limpio, `tools/check_golden.py` sin discrepancias, documento de resultados (`docs/resultados-pruebas.md`) con la matriz real de lo ejecutado.
 - **Regla de commits:** un commit por módulo + pruebas.

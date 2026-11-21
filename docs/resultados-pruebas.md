@@ -1,14 +1,14 @@
-# Resultados de la ejecución del plan de pruebas (v0.2)
+# Resultados de la ejecución del plan de pruebas (v0.3)
 
-Fecha: 2026-11-18 · Comandos: `npm test`, `npm run typecheck`, `python3 tools/check_golden.py`.
+Fecha: 2026-11-21 (v0.2: 2026-11-18) · Comandos: `npm test`, `npm run typecheck`, `python3 tools/check_golden.py`.
 
 ## Resumen
 
 | Comprobación | Resultado |
 |---|---|
-| `npm test` | 70 pruebas: **62 pasan, 0 fallan, 8 `todo`** (familias de la etapa siguiente) |
+| `npm test` | 221 pruebas: **221 pasan, 0 fallan, 0 `todo`** |
 | `npm run typecheck` | limpio |
-| `tools/check_golden.py` (fórmulas calculadas aparte, en Python) | 85 compuestos, 159 nombres, **0 discrepancias** |
+| `tools/check_golden.py` (fórmulas calculadas aparte, en Python) | 115 compuestos, 215 nombres, **0 discrepancias** |
 | UI en Chrome headless | alqueno+alcohol, ácido, incompleto y fuera de alcance se muestran como se espera (captura revisada a mano) |
 
 ## Matriz plan → ejecución
@@ -20,15 +20,30 @@ Fecha: 2026-11-18 · Comandos: `npm test`, `npm run typecheck`, `python3 tools/c
 | T2 parser | ✅ | `parser.test.js`, `funciones.test.js` |
 | T3 constructor | ✅ | `funciones.test.js` (omisión de localizadores, errores específicos) |
 | T4 nombres | ✅ | `namer-funciones.test.js` (22 estructuras × 2 estilos) |
-| T5 casos de oro | ✅ parcial | `oro.test.js` + `test/oro.json`. **Meta del plan (90 / 200) no alcanzada: 85 / 159.** |
+| T5 casos de oro | ✅ | `oro.test.js` + `test/oro.json`. Meta del plan (90 / 200) alcanzada: **115 / 215** (30 compuestos nuevos de T10). |
 | T6 propiedad | ✅ | `propiedad-funciones.test.js`, 3000 moléculas con semilla fija |
 | T7 diagnósticos | ✅ parcial | grupo principal, enlaces múltiples, numeración, alfabético; falta un caso por cada criterio de desempate |
 | T8 render | ✅ | `render-funciones.test.js` |
 | T9 UI | 🟡 | revisada con Chrome headless a mano; **no automatizada** y sin auditoría de errores de consola |
-| T10 éteres/ésteres/aminas/amidas | ✅ (`todo`) | `tier2.test.js`: hoy se declaran fuera de alcance; 8 pruebas `todo` visibles |
+| T10 éteres/ésteres/aminas/amidas | ✅ | `build-t10.test.js` (36), `explain-t10.test.js` (33), `namer-t10.test.js` (40), `render-t10.test.js` (35), `tier2.test.js` (8, antes `todo`) |
 | T11 constructor visual / «verifica mi respuesta» | 🔲 | siguiente etapa |
 
 ## Hallazgos durante la ejecución
+
+### T10 (v0.3)
+
+- **Regresión propia, corregida:** al rechazar `0` como localizador en el parser (para no confundirlo con `N`) rompí `0-bromohexano`, que debe dar «el localizador 0 no existe». `N` ahora es el valor interno −1.
+- **Error previo de las explicaciones:** el conteo de carbonos de un radical ramificado usaba solo su cadena base («isobutil: 3 carbonos»; son 4). Corregido para todos los radicales.
+- **Cinco pruebas antiguas** afirmaban «fuera de alcance» para éteres, ésteres, aminas y amidas. Se reescribieron con casos que siguen sin soporte (nitrilos, tioles, anhídridos, urea, ciclos, imidas, peróxidos); ninguna aserción se relajó.
+- **Colisión de dibujo conocida:** en moléculas muy ramificadas (p. ej. `2,5-dimetil-3-secbutoxihexano`) un radical grande de C3 puede encimarse con el metilo de C5. El layout es simple (zigzag + ramas); no se corrige en esta etapa y lo cubre la prueba de «sin átomos encimados» solo en casos sencillos.
+- **Contradicciones entre las presentaciones de clase y el sistema (a revisar con el profesor):**
+  1. Las aminas secundarias y terciarias se nombran en clase `2-(metilamino)propano` / `1-(etilmetilamino)butano` (amino sustituido como prefijo). El parser aún no lo lee; el sistema genera `N-metilpropan-2-amina`.
+  2. Varios ejemplos de clase no respetan el orden alfabético de los prefijos (`2,4-dimetil-2-aminohexano`, `4-etil-2,2-dimetil-3-bromohexano`, `3-etil-6-metil-5-isopentil-4-aminononano`); el sistema los marca con aviso y propone el orden correcto.
+  3. `BUTOXIBUTANO` se escribe sin localizador en clase; aquí es incompleto (`1-` o `2-butoxibutano` son moléculas distintas).
+  4. Las amidas aparecen como `butanoamida`; se leen, pero el nombre que se genera es `butanamida`.
+  5. Las sales orgánicas (`acetato de sodio`, `propanoato de potasio`) y `acetato de isopropilo` (nombre común con radical ramificado) no se leen todavía.
+
+### v0.2
 
 - Dos pruebas mías estaban mal y las corrigió el sistema: `2,2,2-tribromoetanol` sí es válido (el carbono 2 completa sus 4 enlaces), y `propenal` sin localizador es ambiguo porque `O=C=C-C` cumple valencias.
 - Se detectó y se cerró un hueco: un carbono con `=O` y dos `OH` (ácido carbónico) se nombraba como ácido metanoico y perdía un oxígeno. Ahora se declara fuera de alcance.
