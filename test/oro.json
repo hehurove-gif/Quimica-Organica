@@ -644,5 +644,232 @@
   "variantes": [
    "ácido but-2-enoico"
   ]
+ },
+ {
+  "nombre": "metoxietano",
+  "formula": "C₃H₈O",
+  "smiles": "COCC",
+  "variantes": [
+   "etil metil éter"
+  ]
+ },
+ {
+  "nombre": "etoxietano",
+  "formula": "C₄H₁₀O",
+  "smiles": "CCOCC",
+  "variantes": [
+   "dietil éter",
+   "éter etílico"
+  ]
+ },
+ {
+  "nombre": "2-metoxipropano",
+  "formula": "C₄H₁₀O",
+  "smiles": "COC(C)C",
+  "variantes": [
+   "isopropil metil éter"
+  ]
+ },
+ {
+  "nombre": "1-butoxibutano",
+  "formula": "C₈H₁₈O",
+  "smiles": "CCCCOCCCC",
+  "variantes": [
+   "dibutil éter"
+  ]
+ },
+ {
+  "nombre": "etanoato de metilo",
+  "formula": "C₃H₆O₂",
+  "smiles": "CC(=O)OC",
+  "variantes": [
+   "acetato de metilo"
+  ]
+ },
+ {
+  "nombre": "etanoato de etilo",
+  "formula": "C₄H₈O₂",
+  "smiles": "CC(=O)OCC",
+  "variantes": [
+   "acetato de etilo"
+  ]
+ },
+ {
+  "nombre": "propanoato de etilo",
+  "formula": "C₅H₁₀O₂",
+  "smiles": "CCC(=O)OCC",
+  "variantes": []
+ },
+ {
+  "nombre": "etanoato de isopropilo",
+  "formula": "C₅H₁₀O₂",
+  "smiles": "CC(=O)OC(C)C",
+  "variantes": []
+ },
+ {
+  "nombre": "propanoato de isobutilo",
+  "formula": "C₇H₁₄O₂",
+  "smiles": "CCC(=O)OCC(C)C",
+  "variantes": []
+ },
+ {
+  "nombre": "metanoato de metilo",
+  "formula": "C₂H₄O₂",
+  "smiles": "COC=O",
+  "variantes": [
+   "formiato de metilo"
+  ]
+ },
+ {
+  "nombre": "2-metilpropanoato de isopropilo",
+  "formula": "C₇H₁₄O₂",
+  "smiles": "CC(C)C(=O)OC(C)C",
+  "variantes": []
+ },
+ {
+  "nombre": "2,2-dimetilpropanoato de metilo",
+  "formula": "C₆H₁₂O₂",
+  "smiles": "CC(C)(C)C(=O)OC",
+  "variantes": []
+ },
+ {
+  "nombre": "butanoato de metilo",
+  "formula": "C₅H₁₀O₂",
+  "smiles": "CCCC(=O)OC",
+  "variantes": []
+ },
+ {
+  "nombre": "metanamina",
+  "formula": "CH₅N",
+  "smiles": "CN",
+  "variantes": [
+   "metilamina"
+  ]
+ },
+ {
+  "nombre": "etanamina",
+  "formula": "C₂H₇N",
+  "smiles": "CCN",
+  "variantes": [
+   "etilamina"
+  ]
+ },
+ {
+  "nombre": "1-butanamina",
+  "formula": "C₄H₁₁N",
+  "smiles": "CCCCN",
+  "variantes": [
+   "butan-1-amina",
+   "butilamina"
+  ]
+ },
+ {
+  "nombre": "N-metilmetanamina",
+  "formula": "C₂H₇N",
+  "smiles": "CNC",
+  "variantes": [
+   "dimetilamina"
+  ]
+ },
+ {
+  "nombre": "N,N-dimetilmetanamina",
+  "formula": "C₃H₉N",
+  "smiles": "CN(C)C",
+  "variantes": [
+   "trimetilamina"
+  ]
+ },
+ {
+  "nombre": "N-butil-1-butanamina",
+  "formula": "C₈H₁₉N",
+  "smiles": "CCCCNCCCC",
+  "variantes": [
+   "N-butilbutan-1-amina",
+   "dibutilamina"
+  ]
+ },
+ {
+  "nombre": "N,N-dibutil-1-butanamina",
+  "formula": "C₁₂H₂₇N",
+  "smiles": "CCCCN(CCCC)CCCC",
+  "variantes": [
+   "N,N-dibutilbutan-1-amina",
+   "tributilamina"
+  ]
+ },
+ {
+  "nombre": "N-metiletanamina",
+  "formula": "C₃H₉N",
+  "smiles": "CCNC",
+  "variantes": [
+   "etilmetilamina"
+  ]
+ },
+ {
+  "nombre": "etanamida",
+  "formula": "C₂H₅NO",
+  "smiles": "CC(N)=O",
+  "variantes": [
+   "acetamida"
+  ]
+ },
+ {
+  "nombre": "butanamida",
+  "formula": "C₄H₉NO",
+  "smiles": "CCCC(N)=O",
+  "variantes": [
+   "butanoamida"
+  ]
+ },
+ {
+  "nombre": "2-metilbutanamida",
+  "formula": "C₅H₁₁NO",
+  "smiles": "CCC(C)C(N)=O",
+  "variantes": [
+   "2-metilbutanoamida"
+  ]
+ },
+ {
+  "nombre": "2-metilpropanamida",
+  "formula": "C₄H₉NO",
+  "smiles": "CC(C)C(N)=O",
+  "variantes": [
+   "2-metilpropanoamida"
+  ]
+ },
+ {
+  "nombre": "metanamida",
+  "formula": "CH₃NO",
+  "smiles": "NC=O",
+  "variantes": [
+   "metanoamida",
+   "formamida"
+  ]
+ },
+ {
+  "nombre": "N-metiletanamida",
+  "formula": "C₃H₇NO",
+  "smiles": "CC(=O)NC",
+  "variantes": []
+ },
+ {
+  "nombre": "N,N-dimetiletanamida",
+  "formula": "C₄H₉NO",
+  "smiles": "CC(=O)N(C)C",
+  "variantes": []
+ },
+ {
+  "nombre": "ácido 2-aminopropanoico",
+  "formula": "C₃H₇NO₂",
+  "smiles": "CC(N)C(=O)O",
+  "variantes": []
+ },
+ {
+  "nombre": "1,2-etanodiamina",
+  "formula": "C₂H₈N₂",
+  "smiles": "NCCN",
+  "variantes": [
+   "etano-1,2-diamina"
+  ]
  }
 ]

@@ -10,8 +10,8 @@ import { fromSmiles } from '../src/core/smiles.js';
 const ORO = JSON.parse(readFileSync(new URL('./oro.json', import.meta.url), 'utf8'));
 
 test('T5: la tabla de oro tiene el tamaño comprometido', () => {
-  assert.ok(ORO.length >= 80);
-  assert.ok(ORO.reduce((s, d) => s + 1 + d.variantes.length, 0) >= 150);
+  assert.ok(ORO.length >= 90); // meta del plan: 90 compuestos / 200 nombres (alcanzada con T10)
+  assert.ok(ORO.reduce((s, d) => s + 1 + d.variantes.length, 0) >= 200);
 });
 
 test('T5: cada nombre y variante da la fórmula y la estructura de referencia', () => {
