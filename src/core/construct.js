@@ -15,11 +15,13 @@
 import { fromSmiles } from './smiles.js';
 import { nameMolecule } from './namer.js';
 import { analyze } from './analyze.js';
+import { SUBS, buildRing, nameAromatic, readRing, subByName } from './aromatic.js';
 
 /**
  * @typedef {{ pos: number, kind: string }} DraftGroup
  * @typedef {{ n: number, bonds: (1 | 2 | 3)[], groups: DraftGroup[] }} Draft
  * @typedef {import('./analyze.js').Analysis} Analysis
+ * @typedef {{ ring: true, subs: (string | null)[] }} RingDraft  anillo de benceno: sustituyente (nombre del catálogo) en cada posición 1-6
  * @typedef {{
  *   status: 'valido' | 'invalido' | 'fuera_de_alcance',
  *   errors: string[],
@@ -174,12 +176,60 @@ export function moleculeToDraft(mol, chain) {
   return { n: chain.length, bonds, groups };
 }
 
+/** Sustituyentes que ofrece el constructor de anillo (el catálogo de aromatic.js). */
+export const RING_SUBS = SUBS;
+
+/** @returns {RingDraft} */
+export function emptyRing() {
+  return { ring: true, subs: Array(6).fill(null) };
+}
+
+/** @param {RingDraft} rd @param {number} pos 1-6 @param {string | null} name @returns {RingDraft} */
+export function setRingSub(rd, pos, name) {
+  if (pos < 1 || pos > 6 || (name !== null && !SUBS.some((x) => x.name === name))) return rd;
+  const subs = rd.subs.slice();
+  subs[pos - 1] = name;
+  return { ring: true, subs };
+}
+
+/**
+ * Molécula aromática -> borrador de anillo, con la numeración del nombre (C1 = grupo principal).
+ * @param {import('./molecule.js').Molecule} mol
+ * @returns {RingDraft | null}
+ */
+export function moleculeToRing(mol) {
+  const named = nameAromatic(mol);
+  const rr = readRing(mol);
+  if ('error' in rr) return null;
+  const subs = /** @type {(string | null)[]} */ (Array(6).fill(null));
+  if (named.ok) for (const g of named.groups) subs[g.pos - 1] = g.sub.name;
+  else for (const g of rr.subs) subs[g.idx] = g.sub.name;
+  return { ring: true, subs };
+}
+
+/** @param {RingDraft} rd @returns {Description} */
+function describeRing(rd) {
+  /** @type {Description} */
+  const base = { status: 'invalido', errors: [], smiles: '', molecule: null, formula: null, canonicalName: null, analysis: null };
+  const mol = buildRing(rd.subs.flatMap((n, i) => (n ? [{ pos: i + 1, sub: subByName(n) }] : [])));
+  const issues = mol.validate();
+  if (issues.length) return { ...base, errors: issues.map((i) => i.message) };
+  const nm = nameAromatic(mol);
+  if (!nm.ok) return { ...base, status: 'fuera_de_alcance', molecule: mol, formula: mol.formula(), errors: [`No puedo nombrar esta estructura: ${nm.reason}.`] };
+  const analysis = analyze(nm.systematic);
+  if (analysis.status !== 'valido' || !analysis.molecule || analysis.molecule.canonicalKey() !== mol.canonicalKey()) {
+    return { ...base, status: 'fuera_de_alcance', molecule: mol, formula: mol.formula(), errors: ['El nombre generado no reconstruye la misma estructura, así que no lo muestro.'] };
+  }
+  return { status: 'valido', errors: [], smiles: '', molecule: mol, formula: mol.formula(), canonicalName: nm.systematic, analysis };
+}
+
 /**
  * Borrador -> molécula -> nombre. Nunca devuelve un nombre que no reconstruya la misma molécula.
- * @param {Draft} d
+ * @param {Draft | RingDraft} d
  * @returns {Description}
  */
 export function describe(d) {
+  if ('ring' in d) return describeRing(d);
   const smiles = draftToSmiles(d);
   /** @type {Description} */
   const base = { status: 'invalido', errors: [], smiles, molecule: null, formula: null, canonicalName: null, analysis: null };
@@ -218,7 +268,7 @@ export function describe(d) {
 
 /**
  * «Verifica mi respuesta»: ¿el nombre escrito corresponde a la estructura dibujada?
- * @param {Draft} d @param {string} text
+ * @param {Draft | RingDraft} d @param {string} text
  * @returns {Verdict}
  */
 export function verify(d, text) {
@@ -247,7 +297,7 @@ export function verify(d, text) {
     ...base,
     verdict: same ? 'isomero' : 'distinta',
     message: same
-      ? `Tu nombre tiene la misma fórmula (${mine.formula}) pero describe otra molécula: es un isómero. Revisa la cadena principal, la numeración y los localizadores.`
+      ? `Tu nombre tiene la misma fórmula (${mine.formula}) pero describe otra molécula: es un isómero. ${'ring' in d ? 'Revisa en qué posiciones del anillo está cada sustituyente y la numeración.' : 'Revisa la cadena principal, la numeración y los localizadores.'}`
       : `Tu nombre describe otra molécula: ${a.formula}, y la estructura dibujada es ${mine.formula}. Revisa qué grupos y cuántos carbonos tiene la estructura.`,
     student, notes, expected: mine.canonicalName,
   };
