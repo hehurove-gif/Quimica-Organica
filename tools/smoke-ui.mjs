@@ -44,7 +44,7 @@ await p.screenshot({ path: '/tmp/shot-constructor.png', fullPage: true });
 await p.click('[data-cej="1"]');
 await p.screenshot({ path: '/tmp/shot-constructor2.png', fullPage: true });
 // aromáticos: hexágono, fórmula condensada y sin botón de constructor de cadena
-await p.click('[data-vista="nombre"]').catch(() => {});
+await p.click('#tab-nombre');
 await p.fill('#nombre', '2,4,6-trinitrotolueno');
 console.log('aromático svg átomos:', await p.locator('#svg .atom').count(), '| semi:', (await p.textContent('#semi')).trim(), '| botón constructor oculto:', await p.isHidden('#a-constructor'));
 console.log('errores de consola:', errs);
