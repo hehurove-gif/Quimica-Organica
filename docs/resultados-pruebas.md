@@ -6,7 +6,7 @@ Fecha: 2026-11-21 (v0.2: 2026-11-18) · Comandos: `npm test`, `npm run typecheck
 
 | Comprobación | Resultado |
 |---|---|
-| `npm test` | 284 pruebas: **284 pasan, 0 fallan, 0 `todo`** |
+| `npm test` | 362 pruebas: **362 pasan, 0 fallan, 0 `todo`** (incluye aromáticos y cobertura del plan de Química III) |
 | `npm run typecheck` | limpio |
 | `tools/check_golden.py` (fórmulas calculadas aparte, en Python) | 118 compuestos, 223 nombres, **0 discrepancias** |
 | UI en Chrome headless | alqueno+alcohol, ácido, incompleto y fuera de alcance se muestran como se espera (captura revisada a mano) |
@@ -26,7 +26,8 @@ Fecha: 2026-11-21 (v0.2: 2026-11-18) · Comandos: `npm test`, `npm run typecheck
 | T8 render | ✅ | `render-funciones.test.js` |
 | T9 UI | 🟡 | revisada con Chrome headless a mano; **no automatizada** y sin auditoría de errores de consola |
 | T10 éteres/ésteres/aminas/amidas | ✅ | `build-t10.test.js` (36), `explain-t10.test.js` (33), `namer-t10.test.js` (40), `render-t10.test.js` (35), `tier2.test.js` (8, antes `todo`) |
-| T11 constructor visual / «verifica mi respuesta» | 🔲 | siguiente etapa |
+| T11 constructor visual / «verifica mi respuesta» | ✅ | `construct.test.js` (26), `construct-ring.test.js` (5); UI con `tools/smoke-ui.mjs` |
+| T12 benceno y derivados (plan Química III) | ✅ | `molecule-ring.test.js`, `aromatic-build.test.js` (26), `aromatic-name.test.js` (incluye ida y vuelta exhaustiva), `aromatic-analyze.test.js`, `plan-quimica-iii.test.js` |
 
 ## Hallazgos durante la ejecución
 

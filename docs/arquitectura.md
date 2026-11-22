@@ -36,6 +36,10 @@ texto ──► parser.js ──► AST ──► build.js ──► Molecule �
 ## Limitaciones conocidas de v0.1
 
 - Solo alcanos, radicales alquilo y halógenos (F, Cl, Br, I); cadena principal de hasta 10 carbonos.
-- Sin alquenos, alquinos, ciclos, aromáticos ni grupos funcionales con oxígeno/nitrógeno.
+- Sin ciclos distintos del benceno, polímeros, sales ni sustituyentes compuestos en anillos (ver `docs/cobertura-plan-quimica-iii.md`).
 - Sin editor visual ni estructura→nombre desde un dibujo (el nombre canónico ya existe en el núcleo; falta el constructor/editor).
 - Los casos de referencia los revisó un asistente: **deben revisarse por un profesor de Química** (el oráculo de pruebas aún no es independiente).
+
+## Derivados del benceno
+
+Módulo propio, separado del analizador de cadenas: `aromatic.js` (lectura de nombres, construcción, nombre IUPAC), `aromatic-analysis.js` (estados, notas, pasos), `aromatic-render.js` (hexágono SVG y fórmula condensada). `analyze()` lo consulta primero; si el texto no termina en un padre aromático, sigue el flujo de cadenas. El anillo se modela con enlaces de Kekulé; `Molecule.canonicalKey()` lo trata como aromático (menor de 12 lecturas). El nitro usa cargas formales (N⁺, O⁻) y el sulfo azufre con valencia 6. El constructor admite `RingDraft` (6 posiciones).
