@@ -12,6 +12,7 @@ import { build } from './build.js';
 import { nameMolecule, diagnose } from './namer.js';
 import { semidesarrollada } from './render.js';
 import { explain } from './explain.js';
+import { commonNamesOf } from './lexicon.js';
 
 /**
  * @typedef {import('./parser.js').Ast} Ast
@@ -89,6 +90,13 @@ export function analyze(text) {
       typed === squash(canon.iupac2013) ||
       (canon.radicofuncional !== null && typed === squash(canon.radicofuncional));
 
+    const otros = commonNamesOf(canon.systematic ?? '').filter((n) => squash(n) !== typed);
+    if (otros.length && !common) {
+      notes.push({
+        type: 'comun_equivalente', severity: 'info',
+        message: `En el lenguaje cotidiano y en muchos libros también se llama ${otros.map((n) => `«${n}»`).join(' o ')}.`,
+      });
+    }
     if (p.ast.form === 'radicofuncional') {
       notes.push({
         type: 'equivalencia', severity: 'info',

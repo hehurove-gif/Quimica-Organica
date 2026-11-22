@@ -13,7 +13,7 @@ const CANON = [
   ['CC=CC', '2-buteno', 'but-2-eno'],
   ['C=C', 'eteno', 'eteno'],
   ['C=CC=C', '1,3-butadieno', 'buta-1,3-dieno'],
-  ['CC#C', 'propino', 'propino'],
+  ['CC#C', 'propino', 'prop-1-ino'], // IUPAC 2013 P-14.3.4.2(d) lista el propeno, no el propino
   ['CC#CC', '2-butino', 'but-2-ino'],
   ['CCO', 'etanol', 'etanol'],
   ['CC(O)C', '2-propanol', 'propan-2-ol'],
@@ -22,8 +22,8 @@ const CANON = [
   ['CC=O', 'etanal', 'etanal'],
   ['CC(C)C=O', '2-metilpropanal', '2-metilpropanal'],
   ['O=CCCC=O', 'butanodial', 'butanodial'],
-  ['CC(=O)C', 'propanona', 'propanona'],
-  ['CCC(=O)C', 'butanona', 'butanona'],
+  ['CC(=O)C', 'propanona', 'propan-2-ona'], // excepción expresa de P-14.3.4.4
+  ['CCC(=O)C', 'butanona', 'butan-2-ona'], // excepción expresa de P-14.3.4.4
   ['CCC(=O)CC', '3-pentanona', 'pentan-3-ona'],
   ['CC(=O)O', 'ácido etanoico', 'ácido etanoico'],
   ['CC(C)C(=O)O', 'ácido 2-metilpropanoico', 'ácido 2-metilpropanoico'],

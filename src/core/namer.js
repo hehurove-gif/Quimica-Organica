@@ -520,11 +520,16 @@ function shortest(mol, m, style) {
   // localizadores se escriben siempre: «2-butin-1-ol», «3-buten-2-ona», «2,3-butanodiona».
   const conservar = (m.unsat !== null && m.fn !== null) || m.fnLocs.length > 1;
   if (conservar) return full;
-  if (m.fn && (m.fn === 'cetona' || m.fn === 'alcohol' || m.fn === 'amina')) {
+  // IUPAC 2013, P-14.3.4: solo se omite el localizador en cadenas de uno o dos átomos (metanol,
+  // etanol, eteno, etino) y en el propeno sin sustituyentes; propan-2-ona, butan-2-ona,
+  // propa-1,2-dieno y prop-1-ino los conservan. El estilo escolar quita los que sobran.
+  const iupacOmite = (/** @type {'u' | 's'} */ que) =>
+    style !== 'iupac' || m.n <= 2 || (que === 'u' && m.n === 3 && m.unsat === 'en' && m.unsatLocs.length === 1 && !m.fn);
+  if (m.fn && (m.fn === 'cetona' || m.fn === 'alcohol' || m.fn === 'amina') && iupacOmite('s')) {
     const t = formatName(m, style, { ...omit, s: true });
     if (readsBack(t, mol)) omit.s = true;
   }
-  if (m.unsat) {
+  if (m.unsat && iupacOmite('u')) {
     const t = formatName(m, style, { ...omit, u: true });
     if (readsBack(t, mol)) omit.u = true;
   }

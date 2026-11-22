@@ -191,6 +191,33 @@ export const COMMON_ACYL = /** @type {Record<string, string>} */ ({
   butirato: 'butanoato',
 });
 
+const quitaTildes = (/** @type {string} */ t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+const TILDES = /** @type {Record<string, string>} */ ({
+  acido: 'ácido', eter: 'éter', aldehido: 'aldehído', formaldehido: 'formaldehído', acetaldehido: 'acetaldehído',
+  etilico: 'etílico', metilico: 'metílico', propilico: 'propílico', isopropilico: 'isopropílico', butilico: 'butílico',
+  formico: 'fórmico', acetico: 'acético', propionico: 'propiónico', butirico: 'butírico', dietilico: 'dietílico', dimetilico: 'dimetílico',
+});
+
+/**
+ * Nombres comunes de una molécula a partir de su nombre sistemático (el sentido contrario de
+ * COMMON_COMPOUNDS): «propanona» -> [«acetona»]; «etanoato de isopropilo» -> [«acetato de isopropilo»].
+ * @param {string} systematic
+ * @returns {string[]}
+ */
+export function commonNamesOf(systematic) {
+  const key = quitaTildes(systematic);
+  const fila = COMMON_COMPOUNDS.find((c) => quitaTildes(c.systematic) === key);
+  /** @type {string[]} */
+  const out = fila ? [...fila.names] : [];
+  for (const [comun, sist] of Object.entries(COMMON_ACYL)) {
+    if (key.startsWith(`${sist} de `)) out.push(`${comun}${key.slice(sist.length)}`);
+  }
+  const bonito = (/** @type {string} */ n) => n.split(' ').map((w) => TILDES[w] ?? w).join(' ');
+  // sin repetir lo que ya produce la fila de COMMON_COMPOUNDS
+  return [...new Set(out.map(bonito))];
+}
+
 /**
  * Funciones que el sistema reconoce pero todavía no implementa.
  * Se usan para decir "esto viene después" en vez de "no entiendo".
