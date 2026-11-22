@@ -12,11 +12,11 @@ import { renderRingSvg, ringSemi } from './aromatic-render.js';
  * @typedef {import('./analyze.js').Note} Note
  * @typedef {import('./explain.js').Step} Step
  * @typedef {import('./aromatic-render.js').RingGroup} RingGroup
- * @typedef {{ ringOrder: number[], groups: RingGroup[], svg: (opts?: { locants?: boolean }) => string }} AromaticView
+ * @typedef {{ ringOrder: number[], groups: RingGroup[], variantes: string[], comunes: string[], svg: (opts?: { locants?: boolean }) => string }} AromaticView
  */
 
 /** @param {string} s */
-const squash = (s) => normalize(s).replace(/\s+/g, '').replace(/benzen/g, 'bencen');
+const squash = (s) => normalize(s).replace(/\s+/g, '').replace(/benzen/g, 'bencen').replace(/(^|acido)(orto|meta|para)-/, (_, a, w) => `${a}${w[0]}-`);
 
 const COUNT_WORD = ['', 'un', 'dos', 'tres', 'cuatro', 'cinco', 'seis'];
 
@@ -81,8 +81,8 @@ export function analyzeAromatic(text, base) {
     const alt = named.alternatives.find((a) => squash(a) === typed);
     const comun = named.commons.find((c) => squash(c) === typed);
     correcto = typed === canon || alt !== undefined;
-    if (comun) {
-      notes.push({ type: 'comun', severity: 'info', message: `«${comun}» es un nombre común; el sistemático es «${named.systematic}».` });
+    if (comun || p.ast.parent.common) {
+      notes.push({ type: 'comun', severity: 'info', message: `«${comun ?? text.trim()}» es un nombre común; el sistemático es «${named.systematic}».` });
     } else if (!correcto) {
       notes.push({
         type: 'nombre_canonico', severity: 'aviso',
@@ -102,7 +102,7 @@ export function analyzeAromatic(text, base) {
       notes.push({ type: 'equivalencia', severity: 'info', message: `También se puede nombrar ${noms}.` });
     }
     const otros = named.commons.filter((c) => squash(c) !== typed);
-    if (otros.length && !comun) {
+    if (otros.length && !comun && !p.ast.parent.common) {
       notes.push({ type: 'comun_equivalente', severity: 'info', message: `En el lenguaje cotidiano también se llama ${otros.map((c) => `«${c}»`).join(' o ')}.` });
     }
   } else {
@@ -114,6 +114,8 @@ export function analyzeAromatic(text, base) {
   const aromatic = {
     ringOrder,
     groups,
+    variantes: named.ok ? named.alternatives : [],
+    comunes: named.ok ? named.commons : [],
     svg: (o = {}) => renderRingSvg(mol, ringOrder, groups, o),
   };
 

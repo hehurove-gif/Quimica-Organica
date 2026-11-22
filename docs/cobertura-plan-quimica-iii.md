@@ -42,8 +42,9 @@ Reglas (todas deterministas, ver `src/core/aromatic.js`):
 3. Numeración con el **menor conjunto de localizadores**; si empatan, el primer prefijo en **orden alfabético** recibe el menor.
 4. Monosustituido: sin localizador (`bromobenceno`). Con 2 o más sustituyentes, siempre con localizadores.
 5. **Orto/meta/para** (`o-`, `m-`, `p-`) se aceptan cuando hay exactamente dos sustituyentes, y se avisan como equivalencia de 1,2 / 1,3 / 1,4. `o-xileno` se acepta como nombre común (equivalente a `1,2-dimetilbenceno`).
-6. Faltan localizadores: si hay una sola estructura posible se resuelve (`hexaclorobenceno`); si hay varias, estado **incompleto** con las opciones (`dibromobenceno` → 1,2 / 1,3 / 1,4).
-7. Lo no soportado se dice (**fuera de alcance**) y no se dibuja nada parcial.
+6. **Variantes que se aceptan** (misma estructura): equivalentes sistemáticos que se marcan correctos — `hidroxibenceno`/`fenol`, `aminobenceno` y `bencenamina`/`anilina`, `ácido bencenocarboxílico`/`ácido benzoico`, `bencenocarbaldehído`/`benzaldehído`, `metilbenceno`/`tolueno`, `orto-`/`meta-`/`para-` además de `o-`/`m-`/`p-` — y nombres comunes que se leen, se marcan «común» y remiten al sistemático: `anisol`, `fenetol`, `cumeno`, `fenilamina`, `mesitileno`, `o/m/p-cresol`, `o/m/p-xileno`, `ácido salicílico`. La pantalla de nombres lista «También válido» y «Nombre común».
+7. Faltan localizadores: si hay una sola estructura posible se resuelve (`hexaclorobenceno`); si hay varias, estado **incompleto** con las opciones (`dibromobenceno` → 1,2 / 1,3 / 1,4).
+8. Lo no soportado se dice (**fuera de alcance**) y no se dibuja nada parcial.
 
 Verificación: ida y vuelta exhaustiva (todas las combinaciones de hasta 3 de 8 sustituyentes en las
 posiciones posibles: nombre → estructura → mismo nombre) y los 20 casos del plan con fórmula y clave canónica.

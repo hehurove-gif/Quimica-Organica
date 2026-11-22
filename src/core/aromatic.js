@@ -23,7 +23,8 @@ import { normalize } from './parser.js';
  *   name: string, alpha: string, label: string,
  *   kind: 'frag' | 'nitro' | 'sulfo', smiles?: string,
  * }} SubSpec  name = prefijo (nitro, metil…), alpha = clave de orden alfabético, label = texto condensado
- * @typedef {{ word: string, id: string, principal: string | null, acid?: boolean, needsOrient?: boolean }} Parent
+ * @typedef {{ word: string, id: string, principal: string | null, acid?: boolean, needsOrient?: boolean, second?: string, fixed?: [number, string][], common?: boolean }} Parent
+ *   second = sustituyente cuya posición dan o-/m-/p-; fixed = sustituyentes que el nombre ya trae; common = nombre común
  * @typedef {{ sub: SubSpec, count: number, locants: number[] | null }} Group
  * @typedef {{
  *   kind: 'aromatico', text: string, parent: Parent, orient: 'o' | 'm' | 'p' | null, groups: Group[],
@@ -72,7 +73,19 @@ export const PARENTS = [
   { word: 'tolueno', id: 'tolueno', principal: 'metil' },
   { word: 'fenol', id: 'fenol', principal: 'hidroxi' },
   { word: 'anilina', id: 'anilina', principal: 'amino' },
-  { word: 'xileno', id: 'xileno', principal: 'metil', needsOrient: true },
+  { word: 'xileno', id: 'xileno', principal: 'metil', needsOrient: true, second: 'metil', common: true },
+  // equivalentes sistemáticos válidos (IUPAC acepta los dos)
+  { word: 'bencenamina', id: 'bencenamina', principal: 'amino' },
+  { word: 'bencenocarbaldehido', id: 'bencenocarbaldehido', principal: 'formil' },
+  { word: 'bencenocarboxilico', id: 'bencenocarboxilico', principal: 'carboxi', acid: true },
+  // nombres comunes (se leen y se avisan como comunes)
+  { word: 'fenilamina', id: 'fenilamina', principal: 'amino', common: true },
+  { word: 'anisol', id: 'anisol', principal: 'metoxi', common: true },
+  { word: 'fenetol', id: 'fenetol', principal: 'etoxi', common: true },
+  { word: 'cumeno', id: 'cumeno', principal: 'isopropil', common: true },
+  { word: 'cresol', id: 'cresol', principal: 'hidroxi', needsOrient: true, second: 'metil', common: true },
+  { word: 'mesitileno', id: 'mesitileno', principal: null, fixed: [[1, 'metil'], [3, 'metil'], [5, 'metil']], common: true },
+  { word: 'salicilico', id: 'salicilico', principal: 'carboxi', acid: true, fixed: [[1, 'carboxi'], [2, 'hidroxi']], common: true },
 ];
 
 const MULTS = /** @type {[string, number][]} */ ([['hexa', 6], ['penta', 5], ['tetra', 4], ['tri', 3], ['di', 2]]);
@@ -232,7 +245,8 @@ export function buildAromatic(ast) {
 
   /** @type {Placed[]} */
   const fixed = [];
-  if (parent.principal) fixed.push({ pos: 1, sub: subByName(parent.principal) });
+  if (parent.fixed) for (const [pos, n] of parent.fixed) fixed.push({ pos, sub: subByName(n) });
+  else if (parent.principal) fixed.push({ pos: 1, sub: subByName(parent.principal) });
 
   /** @type {SubSpec[]} */
   const loose = [];
@@ -254,9 +268,10 @@ export function buildAromatic(ast) {
   if (orient) {
     const located = groups.some((g) => g.locants);
     if (located) return bad('orient_y_localizadores', 'No mezcles o-/m-/p- con localizadores numéricos: usa uno u otro.');
+    if (parent.fixed) return bad('orient_no_aplica', `«${parent.word}» ya fija las posiciones de sus sustituyentes: no lleva o-, m- ni p-.`);
     if (parent.needsOrient) {
       if (loose.length) return bad('orient_dos_sustituyentes', 'o-, m- y p-xileno ya llevan sus dos metilos; no admiten más sustituyentes.');
-      const placed = [...fixed, { pos: ORIENT_POS[orient], sub: subByName('metil') }];
+      const placed = [...fixed, { pos: ORIENT_POS[orient], sub: subByName(parent.second ?? 'metil') }];
       return { status: 'valido', molecule: buildRing(placed), placed };
     }
     const principalCount = parent.principal ? 1 : 0;
@@ -274,10 +289,10 @@ export function buildAromatic(ast) {
   if (parent.needsOrient) {
     const opts = (['o', 'm', 'p']).map((o) => `${o}-${parent.word}`).join(', ');
     const options = (['o', 'm', 'p']).map((o) => {
-      const placed = [...fixed, ...[{ pos: ORIENT_POS[/** @type {'o'|'m'|'p'} */ (o)], sub: subByName('metil') }]];
+      const placed = [...fixed, ...[{ pos: ORIENT_POS[/** @type {'o'|'m'|'p'} */ (o)], sub: subByName(parent.second ?? 'metil') }]];
       return { placed, molecule: buildRing(placed) };
     });
-    return { status: 'incompleto', errors: [{ code: 'falta_orientacion', message: `«${parent.word}» necesita saber la posición del segundo metilo: ${opts}.` }], options };
+    return { status: 'incompleto', errors: [{ code: 'falta_orientacion', message: `«${parent.word}» necesita saber la posición del segundo sustituyente: ${opts}.` }], options };
   }
 
   if (fixed.length + loose.length > 6) return bad('demasiados', 'El anillo no tiene sitio para tantos sustituyentes (máximo 6 posiciones).');
@@ -472,6 +487,9 @@ export function nameAromatic(mol) {
     if (principal === 'hidroxi' || principal === 'amino') {
       alternatives.push(compose(null, 'benceno', false).text);
     }
+    if (principal === 'amino') alternatives.push(compose('amino', 'bencenamina', false).text);
+    if (principal === 'carboxi') alternatives.push(compose('carboxi', 'bencenocarboxílico', true).text);
+    if (principal === 'formil') alternatives.push(compose('formil', 'bencenocarbaldehído', false).text);
   } else if (count('metil') === 1 && !subs.some((x) => x.sub.name !== 'metil' && ALKYL.has(x.sub.name))) {
     main = compose('metil', 'tolueno', false);
     parentWord = 'tolueno';
@@ -486,6 +504,14 @@ export function nameAromatic(mol) {
     alternatives.push(`${MULT_WORD[6]}${subs[0].sub.name}benceno`);
   }
 
+  // nombres comunes de una sola pieza
+  const solo = (/** @type {string} */ n) => subs.length === 1 && subs[0].sub.name === n;
+  if (solo('metoxi')) commons.push('anisol');
+  if (solo('etoxi')) commons.push('fenetol');
+  if (solo('isopropil')) commons.push('cumeno');
+  if (solo('amino')) commons.push('fenilamina');
+  if (subs.length === 3 && subs.every((x) => x.sub.name === 'metil') && new Set(subs.map((x) => x.idx % 2)).size === 1) commons.push('mesitileno');
+
   // o-, m-, p- cuando hay exactamente dos sustituyentes
   if (subs.length === 2) {
     const d = ((subs[1].idx - subs[0].idx) % 6 + 6) % 6;
@@ -497,6 +523,8 @@ export function nameAromatic(mol) {
       alternatives.push(`${o}-${prefixText(subs.map((x) => ({ sub: x.sub, p: 0 })), true, '')}${parentWord}`);
     }
     if (count('metil') === 2) commons.push(`${o}-xileno`);
+    if (count('metil') === 1 && count('hidroxi') === 1) commons.push(`${o}-cresol`);
+    if (o === 'o' && count('carboxi') === 1 && count('hidroxi') === 1) commons.push('ácido salicílico');
   }
   return {
     ok: true,

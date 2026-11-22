@@ -139,6 +139,8 @@ function update() {
   if (a.names?.sistematico) row('Nombre sistemático (escolar)', a.names.sistematico);
   if (a.names?.iupac2013 && a.names.iupac2013 !== a.names.sistematico) row('Nombre IUPAC 2013', a.names.iupac2013);
   if (a.names?.radicofuncional) row('Forma radicofuncional', a.names.radicofuncional);
+  if (a.aromatic?.variantes.length) row('También válido', a.aromatic.variantes.join(' · '));
+  if (a.aromatic?.comunes.length) row('Nombre común', a.aromatic.comunes.join(' · '));
   row('Fórmula molecular', a.formula || '');
   row('Tu nombre', a.correcto ? '✓ correcto' : '⚠ se entiende, pero revisa las observaciones');
 
