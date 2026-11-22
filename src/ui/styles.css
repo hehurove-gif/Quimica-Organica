@@ -91,8 +91,18 @@ input[type=range] { width: 100%; }
 .veredicto .v.info { background: var(--info-bg); color: var(--info); }
 #c-a-nombre { margin-top: 10px; }
 
-.modo { display: flex; gap: 8px; margin-bottom: 10px; }
-.modo .btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); font-weight: 700; }
-.anillo { flex-wrap: wrap; gap: 8px; }
-.anillo .carbono { min-width: 120px; }
-.anillo .carbono select { max-width: 140px; }
+
+.uso { margin: 4px 0 10px; padding-left: 1.2em; color: var(--muted, inherit); font-size: .92rem; }
+.uso li { margin: 2px 0; }
+.ejemplos-inicio { margin: 6px 0; }
+.modo { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 10px; }
+.modo .btn { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; }
+.modo .btn small { font-weight: 400; opacity: .75; }
+.modo .btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.anillo-hex { display: grid; grid-template-columns: repeat(3, minmax(120px, 160px)); grid-template-areas: "p6 p1 p2" "hx hx hx" "p5 p4 p3"; justify-content: center; gap: 6px 10px; padding: 8px 0; }
+.anillo-hex .p1 { grid-area: p1; } .anillo-hex .p2 { grid-area: p2; } .anillo-hex .p3 { grid-area: p3; }
+.anillo-hex .p4 { grid-area: p4; } .anillo-hex .p5 { grid-area: p5; } .anillo-hex .p6 { grid-area: p6; }
+.anillo-hex .hx { grid-area: hx; display: grid; place-items: center; color: var(--accent); }
+.anillo-hex .carbono { min-width: 0; }
+.anillo-hex .carbono select { max-width: 100%; width: 100%; }
+.anillo-hex select.usada { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }

@@ -74,37 +74,47 @@
   </main>
 
   <main id="vista-constructor" role="tabpanel" aria-labelledby="tab-constructor" hidden>
-    <section class="entrada" aria-labelledby="c-lbl">
+    <section class="entrada" aria-labelledby="c-titulo">
+      <h2 id="c-titulo">Construye una estructura y comprueba su nombre</h2>
+      <ol class="uso">
+        <li><b>Elige</b> un ejemplo o el tipo de estructura.</li>
+        <li><b>Arma</b> la estructura: cambia enlaces, agrega grupos o elige qué sustituye a cada hidrógeno del anillo.</li>
+        <li><b>Escribe</b> el nombre que crees que tiene y mira si coincide.</li>
+      </ol>
+      <div class="ejemplos ejemplos-inicio" role="group" aria-label="Ejemplos para empezar">
+        <span>Benceno:</span>
+        <button type="button" data-rej="0">benceno</button>
+        <button type="button" data-rej="1">tolueno</button>
+        <button type="button" data-rej="2">fenol</button>
+        <button type="button" data-rej="3">nitrobenceno</button>
+        <button type="button" data-rej="4">p-nitrotolueno</button>
+        <button type="button" data-rej="5">1,3,5-trimetilbenceno</button>
+        <button type="button" data-rej="6">ácido 2-hidroxibenzoico</button>
+        <button type="button" data-rej="7">2,4,6-trinitrotolueno</button>
+      </div>
+      <div class="ejemplos ejemplos-inicio" role="group" aria-label="Ejemplos de cadenas">
+        <span>Cadenas:</span>
+        <button type="button" data-cej="0">2-propanol</button>
+        <button type="button" data-cej="1">ácido 2-aminopropanoico</button>
+        <button type="button" data-cej="2">3-bromo-2,5-dimetilhexano</button>
+        <button type="button" data-cej="3">etanoato de metilo</button>
+        <button type="button" data-cej="4">3-buten-1-ol</button>
+      </div>
       <div class="modo" role="group" aria-label="Tipo de estructura">
-        <button type="button" id="c-modo-cadena" class="btn" aria-pressed="true">Cadena de carbonos</button>
-        <button type="button" id="c-modo-anillo" class="btn" aria-pressed="false">Anillo de benceno</button>
+        <button type="button" id="c-modo-cadena" class="btn" aria-pressed="true"><b>Cadena de carbonos</b><small>alcanos, alcoholes, ácidos, ésteres…</small></button>
+        <button type="button" id="c-modo-anillo" class="btn" aria-pressed="false"><b>Anillo de benceno</b><small>tolueno, fenol, derivados…</small></button>
       </div>
       <div id="c-cadena-box">
         <label id="c-lbl" for="c-n">Carbonos de la cadena principal: <output id="c-n-out">4</output></label>
         <input id="c-n" type="range" min="1" max="10" value="4">
-        <p class="ayuda">Elige cuántos carbonos tiene la cadena, cambia los enlaces entre ellos y agrega grupos a cada carbono. Para un ácido, agrega «=O» y «–OH» al mismo carbono.</p>
+        <p class="ayuda">Cambia el tipo de enlace entre carbonos (— sencillo, = doble, ≡ triple) y usa «+ grupo» en cada carbono. Para un ácido, agrega «=O» y «–OH» al mismo carbono.</p>
         <div id="c-cadena" class="cadena" role="group" aria-label="Cadena de carbonos"></div>
-        <div class="ejemplos" role="group" aria-label="Ejemplos del constructor">
-          <span>Prueba:</span>
-          <button type="button" data-cej="0">2-propanol</button>
-          <button type="button" data-cej="1">ácido 2-aminopropanoico</button>
-          <button type="button" data-cej="2">3-bromo-2,5-dimetilhexano</button>
-          <button type="button" data-cej="3">etanoato de metilo</button>
-          <button type="button" data-cej="4">3-buten-1-ol</button>
-          <button type="button" id="c-limpiar" class="btn">Empezar de nuevo</button>
-        </div>
+        <button type="button" id="c-limpiar" class="btn">Empezar de nuevo</button>
       </div>
       <div id="c-anillo-box" hidden>
-        <p class="ayuda">Cada vértice del hexágono es un carbono del anillo de benceno. Elige qué grupo sustituye al hidrógeno de cada posición (o déjalo sin sustituir). Las posiciones van alrededor del anillo, en sentido horario.</p>
-        <div id="c-anillo" class="cadena anillo" role="group" aria-label="Posiciones del anillo de benceno"></div>
-        <div class="ejemplos" role="group" aria-label="Ejemplos del anillo">
-          <span>Prueba:</span>
-          <button type="button" data-rej="0">2,4,6-trinitrotolueno</button>
-          <button type="button" data-rej="1">ácido 2-hidroxibenzoico</button>
-          <button type="button" data-rej="2">1,3,5-trimetilbenceno</button>
-          <button type="button" data-rej="3">p-nitrotolueno</button>
-          <button type="button" id="c-limpiar-anillo" class="btn">Empezar de nuevo</button>
-        </div>
+        <p class="ayuda">Los seis lugares son los carbonos del anillo, numerados en sentido horario desde arriba. «— H» significa que ese carbono conserva su hidrógeno. Con dos o más sustituyentes, la numeración del nombre la decide el sistema.</p>
+        <div id="c-anillo" class="anillo-hex" role="group" aria-label="Posiciones del anillo de benceno"></div>
+        <button type="button" id="c-limpiar-anillo" class="btn">Empezar de nuevo</button>
       </div>
     </section>
 

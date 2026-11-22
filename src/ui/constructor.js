@@ -106,18 +106,41 @@ function renderCadena() {
   }
 }
 
-/** Editor del anillo: una lista desplegable por posición (1-6). */
+/** Hexágono central del editor de anillo (decorativo): Kekulé con los vértices 1-6. */
+const HEX_SVG = (() => {
+  const pts = Array.from({ length: 6 }, (_, k) => {
+    const ang = ((-90 + 60 * k) * Math.PI) / 180;
+    return [40 * Math.cos(ang), 40 * Math.sin(ang)];
+  });
+  const ln = (/** @type {number} */ i, /** @type {number} */ j, /** @type {number} */ w) =>
+    `<line x1="${pts[i][0].toFixed(1)}" y1="${pts[i][1].toFixed(1)}" x2="${pts[j][0].toFixed(1)}" y2="${pts[j][1].toFixed(1)}" stroke-width="${w}"/>`;
+  const dobles = [0, 2, 4].map((i) => {
+    const j = (i + 1) % 6;
+    const mx = (pts[i][0] + pts[j][0]) / 2;
+    const my = (pts[i][1] + pts[j][1]) / 2;
+    const f = 7 / Math.hypot(mx, my);
+    const sh = (/** @type {number[]} */ p) => [p[0] - mx * f + (mx - p[0]) * 0.18, p[1] - my * f + (my - p[1]) * 0.18];
+    const a = sh(pts[i]);
+    const b = sh(pts[j]);
+    return `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke-width="1.6"/>`;
+  });
+  const nums = pts.map((p, k) => `<text x="${(p[0] * 0.55).toFixed(1)}" y="${(p[1] * 0.55).toFixed(1)}">${k + 1}</text>`);
+  return `<svg viewBox="-60 -60 120 120" width="130" height="130" aria-hidden="true" stroke="currentColor" fill="none" stroke-linecap="round">${[0, 1, 2, 3, 4, 5].map((i) => ln(i, (i + 1) % 6, 1.6)).join('')}${dobles.join('')}<g fill="currentColor" stroke="none" font-size="11" text-anchor="middle" dominant-baseline="central" opacity=".6">${nums.join('')}</g></svg>`;
+})();
+
+/** Editor del anillo: seis listas desplegables colocadas alrededor de un hexágono (1 arriba, sentido horario). */
 function renderAnillo() {
   const box = $('c-anillo');
   box.replaceChildren();
   ringDraft.subs.forEach((name, k) => {
-    const col = el('div', 'carbono');
-    col.append(el('div', 'c', `C${k + 1}`));
+    const col = el('div', `carbono pos p${k + 1}`);
+    col.append(el('div', 'c', String(k + 1)));
     const sel = /** @type {HTMLSelectElement} */ (el('select'));
     sel.setAttribute('aria-label', `Sustituyente en la posición ${k + 1}`);
     sel.append(Object.assign(el('option', '', '— H'), { value: '' }));
     for (const s of RING_SUBS) sel.append(Object.assign(el('option', '', `${s.name} (${s.label})`), { value: s.name }));
     sel.value = name ?? '';
+    sel.classList.toggle('usada', !!name);
     sel.addEventListener('change', () => {
       ringDraft = setRingSub(ringDraft, k + 1, sel.value || null);
       render();
@@ -125,6 +148,9 @@ function renderAnillo() {
     col.append(sel);
     box.append(col);
   });
+  const hx = el('div', 'hx');
+  hx.innerHTML = HEX_SVG;
+  box.append(hx);
 }
 
 /** Veredicto de «Verifica mi respuesta». */
@@ -228,10 +254,14 @@ $('c-modo-cadena').addEventListener('click', () => loadDraft(draft));
 $('c-modo-anillo').addEventListener('click', () => loadDraft(ringDraft));
 /** Ejemplos del anillo: [posición, sustituyente][] */
 const EJ_ANILLO = /** @type {[number, string][][]} */ ([
-  [[1, 'metil'], [2, 'nitro'], [4, 'nitro'], [6, 'nitro']],
-  [[1, 'carboxi'], [2, 'hidroxi']],
-  [[1, 'metil'], [3, 'metil'], [5, 'metil']],
+  [],
+  [[1, 'metil']],
+  [[1, 'hidroxi']],
+  [[1, 'nitro']],
   [[1, 'metil'], [4, 'nitro']],
+  [[1, 'metil'], [3, 'metil'], [5, 'metil']],
+  [[1, 'carboxi'], [2, 'hidroxi']],
+  [[1, 'metil'], [2, 'nitro'], [4, 'nitro'], [6, 'nitro']],
 ]);
 document.querySelectorAll('[data-rej]').forEach((b) =>
   b.addEventListener('click', () => {

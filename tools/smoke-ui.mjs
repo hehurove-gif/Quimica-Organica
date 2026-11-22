@@ -50,7 +50,7 @@ console.log('aromático svg átomos:', await p.locator('#svg .atom').count(), '|
 // constructor de anillo
 await p.click('#tab-constructor');
 await p.click('#c-modo-anillo');
-await p.click('[data-rej="0"]');
+await p.click('[data-rej="7"]');
 console.log('anillo: estado', (await p.textContent('#c-estado')).trim().slice(0, 40), '| nombres:', (await p.textContent('#c-nombres')).trim().replace(/\s+/g, ' ').slice(0, 80));
 await p.fill('#c-nombre', 'p-nitrotolueno');
 console.log('anillo veredicto:', (await p.textContent('#c-veredicto')).trim().slice(0, 60));
