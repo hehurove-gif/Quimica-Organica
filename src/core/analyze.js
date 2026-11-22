@@ -9,7 +9,7 @@
  */
 import { parse, normalize } from './parser.js';
 import { build } from './build.js';
-import { nameMolecule, diagnose } from './namer.js';
+import { nameMolecule, diagnose, aminaComoPrefijoOf } from './namer.js';
 import { semidesarrollada } from './render.js';
 import { explain } from './explain.js';
 import { commonNamesOf } from './lexicon.js';
@@ -60,7 +60,19 @@ export function analyze(text) {
   const b = build(p.ast);
   for (const n of b.notes) notes.push({ type: n.type, severity: 'aviso', message: n.message });
   if (b.status !== 'valido' || !b.molecule) {
-    return { ...base, status: b.status, errors: b.errors, ast: p.ast, notes };
+    // localizador omitido con varias moléculas posibles: decir cómo se llamaría cada una
+    const errors = b.errors.map((e) => {
+      if (!e.candidates) return e;
+      const opciones = e.candidates
+        .map((c) => {
+          const r = nameMolecule(c.molecule);
+          return r.ok && r.systematic ? `«${r.systematic}»${r.radicofuncional ? ` (${r.radicofuncional})` : ''}` : null;
+        })
+        .filter((x) => x !== null);
+      const { candidates: _omit, ...rest } = e;
+      return opciones.length > 1 ? { ...rest, message: `${rest.message} Según el carbono que elijas sería: ${opciones.join(' o ')}.` } : rest;
+    });
+    return { ...base, status: b.status, errors, ast: p.ast, notes };
   }
   const mol = b.molecule;
   const canon = nameMolecule(mol);
@@ -95,6 +107,13 @@ export function analyze(text) {
       notes.push({
         type: 'comun_equivalente', severity: 'info',
         message: `En el lenguaje cotidiano y en muchos libros también se llama ${otros.map((n) => `«${n}»`).join(' o ')}.`,
+      });
+    }
+    const deClase = aminaComoPrefijoOf(mol);
+    if (deClase && squash(deClase) !== typed && squash(deClase) !== squash(canon.systematic ?? '')) {
+      notes.push({
+        type: 'forma_de_clase', severity: 'info',
+        message: `Muchos libros y presentaciones de clase nombran la amina como sustituyente de un alcano: «${deClase}». La nomenclatura actual usa «${canon.systematic}».`,
       });
     }
     if (p.ast.form === 'radicofuncional') {

@@ -6,7 +6,7 @@ Fecha: 2026-11-21 (v0.2: 2026-11-18) · Comandos: `npm test`, `npm run typecheck
 
 | Comprobación | Resultado |
 |---|---|
-| `npm test` | 252 pruebas: **252 pasan, 0 fallan, 0 `todo`** |
+| `npm test` | 284 pruebas: **284 pasan, 0 fallan, 0 `todo`** |
 | `npm run typecheck` | limpio |
 | `tools/check_golden.py` (fórmulas calculadas aparte, en Python) | 118 compuestos, 223 nombres, **0 discrepancias** |
 | UI en Chrome headless | alqueno+alcohol, ácido, incompleto y fuera de alcance se muestran como se espera (captura revisada a mano) |

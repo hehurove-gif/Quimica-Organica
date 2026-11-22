@@ -20,14 +20,29 @@ Fecha: 2026-11-21. Alcance: los 118 compuestos de `test/oro.json`, con los tres 
 
 Regla nueva (`shortest` en `namer.js`): con enlace múltiple **y** función a la vez, o con varias funciones iguales, se escriben todos los localizadores. Se siguen leyendo las formas cortas (`butenona`, `ácido propenoico`); solo cambia lo que el sistema escribe.
 
-## Para el profesor (decisiones de criterio, no de error)
+## Los 6 puntos de criterio: decisión tomada y cómo quedó
 
-1. **Localizadores omitidos cuando no hay ambigüedad:** el sistema escribe `propeno`, `propino`, `propadieno`, `butanona`, `propanona`, `metanamina`, pero `1-buteno`, `2-butanol`. IUPAC 2013 es más estricto en algunos de estos (`propa-1,2-dieno`, `prop-1-eno`); los libros de bachillerato suelen escribir la forma corta. ¿Qué exige el programa?
-2. **Dos estilos:** escolar (`1-buteno`, `2-propanol`, `1,2-etanodiol`) e IUPAC 2013 (`but-1-eno`, `propan-2-ol`, `etano-1,2-diol`). Se muestran ambos; el principal es el escolar.
-3. **`etanoato` / `acetato`:** el nombre principal es el sistemático; `acetato de etilo` se lee y se muestra como equivalencia.
-4. **Aminas:** el principal es `N-metil-2-propanamina`; también se ofrecen `N-metilpropan-2-amina` e `isopropilmetilamina`. Las presentaciones usan `2-(metilamino)propano`, que se lee pero no es la forma que se escribe.
-5. **Éteres:** `1-butoxibutano` lleva localizador (clase escribe `butoxibutano`); con `1-` y `2-` son moléculas distintas, así que sin localizador se pide completarlo.
-6. **Orden alfabético:** algunos ejemplos de clase no lo respetan (`2,4-dimetil-2-aminohexano`); el sistema los acepta, avisa y escribe el orden correcto.
+Estos puntos eran decisiones de criterio, no errores. Sin un profesor a la mano, cada uno se resolvió con la regla escrita más defendible y se dejó una prueba (`test/revision-nombres.test.js`). Si el programa de la asignatura pide otra cosa, cada decisión se puede revertir de forma independiente.
+
+| # | Punto | Decisión | Dónde |
+|---|---|---|---|
+| 1 | Localizadores omitidos | **Estilo IUPAC 2013** sigue P-14.3.4 (fuente: Libro Azul, cap. P-1): se omiten en cadenas de 1–2 átomos (`metanol`, `etanol`, `eteno`) y en `propeno`; se conservan en `propan-2-ona`, `butan-2-ona`, `propa-1,2-dieno`, `ácido prop-2-enoico`. **Estilo escolar** quita los que sobran cuando no hay duda (`propanona`, `butanona`, `propadieno`). | `shortest` en `namer.js` |
+| 2 | Dos estilos | Se mantienen ambos; el principal es el escolar y el IUPAC se muestra siempre que difiera. Los dos se aceptan como entrada. | — |
+| 3 | `etanoato` / `acetato` y otros comunes | Ahora, además del nombre sistemático, se muestra el nombre común como equivalencia: «también se llama *acetona*», «*acetato de isopropilo*», «*ácido acético*»… con cualquier radical en los ésteres. | `commonNamesOf` en `lexicon.js` |
+| 4 | Aminas (`N-metil-2-propanamina` vs `2-(metilamino)propano`) | El nombre principal sigue siendo el actual; la forma de clase se muestra como equivalencia y siempre se lee de vuelta como la misma molécula. | `aminaComoPrefijoOf` en `namer.js` |
+| 5 | Éteres sin localizador (`butoxibutano`) | Se sigue pidiendo el localizador (no se adivina qué molécula quiso decir), pero el mensaje ahora dice qué molécula sería cada opción: «1-butoxibutano (dibutil éter)» o «1-sec-butoxibutano». | `analyze.js` |
+| 6 | Orden alfabético | Sin cambios: se acepta, se avisa y se escribe el orden correcto. Queda cubierto por prueba con los dos ejemplos de clase. | — |
+
+### Corrección a una versión anterior de este documento
+
+La primera versión decía que IUPAC 2013 es «más estricto» y pedía `prop-1-eno`. **Era incorrecto:** P-14.3.4.2(d) lista el `propeno` entre los casos en que se omite el localizador. Lo que sí exige conservar son `propan-2-ona`, `butan-2-ona`, `propa-1,2-dieno` y `prop-2-enoic acid` (P-14.3.4.4). El `propino` no aparece en esa lista; se dejó con localizador (`prop-1-ino`) por prudencia y queda marcado para el profesor.
+
+## Qué sigue necesitando a un profesor
+
+1. ¿El programa de bachillerato acepta `propanona`, `butanona` y `propadieno` sin localizador (estilo escolar), o prefiere siempre localizador?
+2. `propino`: ¿con o sin localizador en estilo IUPAC? (`prop-1-ino` es lo que genera hoy.)
+3. ¿El nombre principal que se muestra debe ser el escolar o el IUPAC 2013?
+4. ¿Se enseña la forma `2-(metilamino)propano` o la `N-metil-2-propanamina`? Hoy se muestran las dos.
 
 ## Límites de esta revisión
 

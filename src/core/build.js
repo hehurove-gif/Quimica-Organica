@@ -22,7 +22,7 @@ import { stemOf } from './lexicon.js';
  * @typedef {import('./parser.js').Sub} Sub
  * @typedef {import('./parser.js').Span} Span
  * @typedef {import('./parser.js').EsterTail} EsterTail
- * @typedef {{ code: string, message: string, from?: number, to?: number }} BuildError
+ * @typedef {{ code: string, message: string, from?: number, to?: number, candidates?: { locants: string, molecule: Molecule }[] }} BuildError
  * @typedef {{ type: string, message: string }} BuildNote
  * @typedef {{
  *   role: 'cadena' | 'grupo' | 'halogenuro' | 'insaturacion' | 'funcion',
@@ -537,13 +537,18 @@ function buildStructure(spec) {
   }
   /** @type {Map<string, (number[] | null)[]>} */
   const byKey = new Map();
+  /** @type {Map<string, Molecule>} */
+  const molByKey = new Map();
   for (const combo of product(unknown.map((u, j) => multisets(items[u].domain, sizes[j])))) {
     const pos = [...fixed];
     unknown.forEach((gi, j) => (pos[gi] = combo[j]));
     const a = assemble(spec, items, pos);
     if (!a || a.mol.validate().length) continue;
     const key = a.mol.canonicalKey();
-    if (key !== null && !byKey.has(key)) byKey.set(key, pos);
+    if (key !== null && !byKey.has(key)) {
+      byKey.set(key, pos);
+      molByKey.set(key, a.mol);
+    }
   }
   if (byKey.size === 0) {
     const first = unknown.reduce((acc, gi, j) => { acc[gi] = Array(sizes[j]).fill(items[gi].domain[0]); return acc; }, [...fixed]);
@@ -561,6 +566,10 @@ function buildStructure(spec) {
         code: 'localizador_ambiguo',
         message: `Falta el localizador de «${it.label}»: en ${label} puede ir en distintos carbonos (${options.slice(0, 6).join(' / ')}) y cada opción es una molécula diferente. Escríbelo en el nombre, por ejemplo «${options[0]}-${it.label}».`,
         ...(it.span ? { from: it.span.from, to: it.span.to } : {}),
+        candidates: [...byKey.entries()].map(([k, p]) => ({
+          locants: (p[ui] || []).map((x) => (x === N_POS ? 'N' : x)).join(','),
+          molecule: /** @type {Molecule} */ (molByKey.get(k)),
+        })),
       }],
     };
   }

@@ -651,13 +651,15 @@ function radicofuncionalOf(mol) {
 /**
  * Nombre canónico de una molécula.
  * @param {Molecule} mol
+ * @param {{ aminaComoPrefijo?: boolean }} [opts] aminaComoPrefijo: la amina no es el grupo principal
+ *   y se nombra «amino» / «(metilamino)» (forma de las presentaciones de clase)
  * @returns {NameResult}
  */
-export function nameMolecule(mol) {
+export function nameMolecule(mol, opts = {}) {
   const reason = whyNot(mol);
   if (reason) return { ok: false, reason };
   try {
-    const principal = principalOf(mol);
+    const principal = opts.aminaComoPrefijo && principalOf(mol) === 'amina' ? null : principalOf(mol);
     const carbons = mol.atoms.filter((a) => a.el === 'C').map((a) => a.id);
     /** @type {number[][]} */
     const all = [];
@@ -705,6 +707,19 @@ export function nameMolecule(mol) {
     if (e instanceof Unsupported) return { ok: false, reason: e.message };
     throw e;
   }
+}
+
+/**
+ * Forma de clase de una amina: «2-(metilamino)propano», «1-(etilmetilamino)butano».
+ * Solo si la amina es el grupo principal y el nombre se lee de vuelta como la misma molécula.
+ * @param {Molecule} mol
+ * @returns {string | null}
+ */
+export function aminaComoPrefijoOf(mol) {
+  if (principalOf(mol) !== 'amina') return null;
+  const r = nameMolecule(mol, { aminaComoPrefijo: true });
+  if (!r.ok || !r.systematic) return null;
+  return readsBack(r.systematic, mol) ? r.systematic : null;
 }
 
 /**
