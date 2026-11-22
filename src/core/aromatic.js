@@ -299,3 +299,192 @@ export function buildAromatic(ast) {
     options,
   };
 }
+
+// ───────────────────────────── Nombre de una molécula aromática ─────────────────────────────
+
+/** Clave de cada sustituyente del catálogo tal como se ve colgado del anillo. */
+const SUB_KEYS = new Map(
+  SUBS.map((s) => {
+    const m = buildRing([{ pos: 1, sub: s }]);
+    const nb = m.neighbors(0).find((x) => x.id >= 6);
+    return [`${/** @type {{ id: number, order: number }} */ (nb).order}${m._rooted(/** @type {{ id: number }} */ (nb).id, 0, '')}`, s];
+  }),
+);
+
+/** Prioridad como grupo principal (ácido > sulfónico > aldehído > hidroxilo > amina). */
+const PRIORITY = ['carboxi', 'sulfo', 'formil', 'hidroxi', 'amino'];
+const PARENT_OF = /** @type {Record<string, { word: string, acid: boolean }>} */ ({
+  carboxi: { word: 'benzoico', acid: true },
+  sulfo: { word: 'bencenosulfónico', acid: true },
+  formil: { word: 'benzaldehído', acid: false },
+  hidroxi: { word: 'fenol', acid: false },
+  amino: { word: 'anilina', acid: false },
+});
+const MULT_WORD = ['', '', 'di', 'tri', 'tetra', 'penta', 'hexa'];
+const ALKYL = new Set(['metil', 'etil', 'propil', 'isopropil', 'butil', 'isobutil', 'sec-butil', 'terc-butil']);
+
+/**
+ * @typedef {{
+ *   ok: true,
+ *   systematic: string, iupac2013: string,
+ *   alternatives: string[],
+ *   commons: string[],
+ *   parent: string,
+ *   ringOrder: number[],
+ *   placed: Placed[],
+ * } | { ok: false, reason: string }} AromName
+ */
+
+/**
+ * Compara dos listas de números (menor lexicográfico).
+ * @param {number[]} a @param {number[]} b
+ */
+function cmpNums(a, b) {
+  for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) return a[i] - b[i];
+  return a.length - b.length;
+}
+
+/**
+ * Mejor numeración (C1 en el ancla si hay ancla). Menor conjunto de localizadores; a igualdad,
+ * el primer prefijo alfabético recibe el menor localizador.
+ * @param {{ idx: number, sub: SubSpec }[]} subs  posición en el ciclo (0-5) de cada sustituyente
+ * @param {number | null} anchorIdx  índice (en `subs`) del sustituyente que va en C1, o null
+ * @returns {{ s: number, d: 1 | -1, pos: number[] }}  pos[i] = localizador del sustituyente i
+ */
+function bestNumbering(subs, anchorIdx) {
+  /** @type {{ s: number, d: 1 | -1, pos: number[] } | null} */
+  let best = null;
+  /** @type {number[]} */
+  let bestKey = [];
+  for (let s = 0; s < 6; s++) {
+    for (const d of /** @type {(1 | -1)[]} */ ([1, -1])) {
+      const pos = subs.map((x) => ((((x.idx - s) * d) % 6) + 6) % 6 + 1);
+      if (anchorIdx !== null && pos[anchorIdx] !== 1) continue;
+      const rest = subs.map((x, i) => ({ x, p: pos[i] })).filter((_, i) => i !== anchorIdx);
+      const set = rest.map((r) => r.p).sort((a, b) => a - b);
+      const alpha = [...rest]
+        .sort((a, b) => a.x.sub.alpha.localeCompare(b.x.sub.alpha) || a.x.sub.name.localeCompare(b.x.sub.name) || a.p - b.p)
+        .map((r) => r.p);
+      const key = [...set, -1, ...alpha];
+      if (!best || cmpNums(key, bestKey) < 0) { best = { s, d, pos }; bestKey = key; }
+    }
+  }
+  return /** @type {{ s: number, d: 1 | -1, pos: number[] }} */ (best);
+}
+
+/**
+ * Texto de los prefijos con localizadores, en orden alfabético.
+ * @param {{ sub: SubSpec, p: number }[]} items
+ * @param {boolean} omitLocants
+ * @param {string} [joiner]
+ */
+function prefixText(items, omitLocants, joiner = '-') {
+  /** @type {Map<string, { sub: SubSpec, locs: number[] }>} */
+  const groups = new Map();
+  for (const it of items) {
+    const g = groups.get(it.sub.name) ?? { sub: it.sub, locs: [] };
+    g.locs.push(it.p);
+    groups.set(it.sub.name, g);
+  }
+  return [...groups.values()]
+    .sort((a, b) => a.sub.alpha.localeCompare(b.sub.alpha) || a.sub.name.localeCompare(b.sub.name))
+    .map((g) => {
+      const loc = omitLocants ? '' : `${g.locs.sort((a, b) => a - b).join(',')}-`;
+      return `${loc}${MULT_WORD[g.locs.length]}${g.sub.name}`;
+    })
+    .join(joiner);
+}
+
+/**
+ * Nombra un benceno sustituido (IUPAC: grupo principal en C1, menor conjunto de localizadores,
+ * orden alfabético). Devuelve `ok: false` con el motivo si algo no está soportado.
+ * @param {Molecule} mol
+ * @returns {AromName}
+ */
+export function nameAromatic(mol) {
+  const r = mol.benzeneRing();
+  if (!r) return { ok: false, reason: 'no es un anillo de benceno con sustituyentes sencillos' };
+  const { ring, alive } = r;
+  /** @type {{ idx: number, sub: SubSpec }[]} */
+  const subs = [];
+  for (let idx = 0; idx < 6; idx++) {
+    for (const nb of mol.neighbors(ring[idx])) {
+      if (alive.has(nb.id)) continue;
+      const sub = SUB_KEYS.get(`${nb.order}${mol._rooted(nb.id, ring[idx], '')}`);
+      if (!sub) return { ok: false, reason: 'tiene un sustituyente que todavía no está soportado en anillos' };
+      subs.push({ idx, sub });
+    }
+  }
+  const count = (/** @type {string} */ n) => subs.filter((x) => x.sub.name === n).length;
+  const principal = PRIORITY.find((n) => count(n) > 0) ?? null;
+  if (principal && count(principal) > 1) {
+    return { ok: false, reason: `tiene más de un grupo «${principal}» (diácidos, dioles, diaminas…), que todavía no están soportados` };
+  }
+
+  /**
+   * @param {string | null} anchor nombre del sustituyente que va en C1 (padre retenido) o null
+   * @param {string} parentWord
+   * @param {boolean} acid
+   */
+  const compose = (anchor, parentWord, acid) => {
+    const anchorIdx = anchor === null ? null : subs.findIndex((x) => x.sub.name === anchor);
+    const num = bestNumbering(subs, anchorIdx === -1 ? null : anchorIdx);
+    const items = subs.map((x, i) => ({ sub: x.sub, p: num.pos[i] })).filter((_, i) => i !== anchorIdx);
+    const omit = items.length === 0 || (anchor === null && items.length === 1);
+    const pre = prefixText(items, omit);
+    const placed = subs.map((x, i) => ({ pos: num.pos[i], sub: x.sub })).sort((a, b) => a.pos - b.pos);
+    return { text: `${acid ? 'ácido ' : ''}${pre}${parentWord}`, num, items, placed };
+  };
+
+  /** @type {ReturnType<typeof compose>} */
+  let main;
+  /** @type {string[]} */
+  const alternatives = [];
+  /** @type {string[]} */
+  const commons = [];
+  let parentWord = 'benceno';
+
+  if (principal) {
+    const pp = PARENT_OF[principal];
+    main = compose(principal, pp.word, pp.acid);
+    parentWord = pp.word;
+    if (principal === 'hidroxi' || principal === 'amino') {
+      alternatives.push(compose(null, 'benceno', false).text);
+    }
+  } else if (count('metil') === 1 && !subs.some((x) => x.sub.name !== 'metil' && ALKYL.has(x.sub.name))) {
+    main = compose('metil', 'tolueno', false);
+    parentWord = 'tolueno';
+    alternatives.push(compose(null, 'benceno', false).text);
+  } else {
+    main = compose(null, 'benceno', false);
+  }
+  const sistematico = main.text;
+
+  // todas las posiciones ocupadas por el mismo sustituyente: los localizadores sobran
+  if (!principal && parentWord === 'benceno' && subs.length === 6 && new Set(subs.map((x) => x.sub.name)).size === 1) {
+    alternatives.push(`${MULT_WORD[6]}${subs[0].sub.name}benceno`);
+  }
+
+  // o-, m-, p- cuando hay exactamente dos sustituyentes
+  if (subs.length === 2) {
+    const d = ((subs[1].idx - subs[0].idx) % 6 + 6) % 6;
+    const o = d === 1 || d === 5 ? 'o' : d === 2 || d === 4 ? 'm' : 'p';
+    if (principal || parentWord === 'tolueno') {
+      const acid = principal !== null && PARENT_OF[principal].acid;
+      alternatives.push(`${acid ? 'ácido ' : ''}${o}-${main.items[0].sub.name}${parentWord}`);
+    } else {
+      alternatives.push(`${o}-${prefixText(subs.map((x) => ({ sub: x.sub, p: 0 })), true, '')}${parentWord}`);
+    }
+    if (count('metil') === 2) commons.push(`${o}-xileno`);
+  }
+  return {
+    ok: true,
+    systematic: sistematico,
+    iupac2013: sistematico,
+    alternatives: [...new Set(alternatives)].filter((a) => a !== sistematico),
+    commons,
+    parent: parentWord,
+    ringOrder: Array.from({ length: 6 }, (_, k) => ring[(((main.num.s + main.num.d * k) % 6) + 6) % 6]),
+    placed: main.placed,
+  };
+}

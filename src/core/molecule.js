@@ -212,13 +212,10 @@ export class Molecule {
   }
 
   /**
-   * Clave canónica de un anillo de benceno con sustituyentes acíclicos (el único ciclo admitido).
-   * El anillo se toma como aromático: las dos formas de Kekulé son la misma molécula, así que
-   * se ignoran los órdenes de enlace del anillo y se toma la menor de las 12 lecturas
-   * (6 giros × 2 sentidos) de los sustituyentes.
-   * @returns {string | null} null si no es exactamente un anillo de benceno con sustituyentes acíclicos.
+   * Anillo de benceno (Kekulé) con sustituyentes acíclicos: los 6 carbonos en orden de ciclo.
+   * @returns {{ ring: number[], alive: Set<number> } | null} null si no es exactamente ese caso.
    */
-  _ringKey() {
+  benzeneRing() {
     const n = this.atoms.length;
     if (n < 6 || this.components().length !== 1 || this.bonds.length !== n) return null;
     // anillo = lo que queda al recortar hojas repetidamente
@@ -236,7 +233,7 @@ export class Molecule {
     const ringN = (/** @type {number} */ id) => this.neighbors(id).filter((nb) => alive.has(nb.id));
     if ([...alive].some((id) => ringN(id).length !== 2 || this.atoms[id].el !== 'C')) return null;
     // recorrer el ciclo
-    const start = [...alive][0];
+    const start = Math.min(...alive);
     /** @type {number[]} */
     const ring = [start];
     let prev = -1;
@@ -254,6 +251,20 @@ export class Molecule {
     for (const id of ring) {
       if (ringN(id).filter((nb) => nb.order === 2).length !== 1 || ringN(id).some((nb) => nb.order === 3)) return null;
     }
+    return { ring, alive };
+  }
+
+  /**
+   * Clave canónica de un anillo de benceno con sustituyentes acíclicos (el único ciclo admitido).
+   * El anillo se toma como aromático: las dos formas de Kekulé son la misma molécula, así que
+   * se ignoran los órdenes de enlace del anillo y se toma la menor de las 12 lecturas
+   * (6 giros × 2 sentidos) de los sustituyentes.
+   * @returns {string | null} null si no es exactamente un anillo de benceno con sustituyentes acíclicos.
+   */
+  _ringKey() {
+    const r = this.benzeneRing();
+    if (!r) return null;
+    const { ring, alive } = r;
     const sub = (/** @type {number} */ id) =>
       this.neighbors(id)
         .filter((nb) => !alive.has(nb.id))
