@@ -1,0 +1,464 @@
+[
+ {
+  "nombre": "benceno",
+  "formula": "C₆H₆",
+  "sustituyentes": [],
+  "variantes": []
+ },
+ {
+  "nombre": "bromobenceno",
+  "formula": "C₆H₅Br",
+  "sustituyentes": [
+   "bromo"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "clorobenceno",
+  "formula": "C₆H₅Cl",
+  "sustituyentes": [
+   "cloro"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "fluorobenceno",
+  "formula": "C₆H₅F",
+  "sustituyentes": [
+   "fluoro"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "yodobenceno",
+  "formula": "C₆H₅I",
+  "sustituyentes": [
+   "yodo"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "nitrobenceno",
+  "formula": "C₆H₅NO₂",
+  "sustituyentes": [
+   "nitro"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "tolueno",
+  "formula": "C₇H₈",
+  "sustituyentes": [
+   "metil"
+  ],
+  "variantes": [
+   "metilbenceno"
+  ]
+ },
+ {
+  "nombre": "etilbenceno",
+  "formula": "C₈H₁₀",
+  "sustituyentes": [
+   "etil"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "propilbenceno",
+  "formula": "C₉H₁₂",
+  "sustituyentes": [
+   "propil"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "isopropilbenceno",
+  "formula": "C₉H₁₂",
+  "sustituyentes": [
+   "isopropil"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "terc-butilbenceno",
+  "formula": "C₁₀H₁₄",
+  "sustituyentes": [
+   "terc-butil"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "fenol",
+  "formula": "C₆H₆O",
+  "sustituyentes": [
+   "hidroxi"
+  ],
+  "variantes": [
+   "hidroxibenceno"
+  ]
+ },
+ {
+  "nombre": "anilina",
+  "formula": "C₆H₇N",
+  "sustituyentes": [
+   "amino"
+  ],
+  "variantes": [
+   "aminobenceno"
+  ]
+ },
+ {
+  "nombre": "metoxibenceno",
+  "formula": "C₇H₈O",
+  "sustituyentes": [
+   "metoxi"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "ácido benzoico",
+  "formula": "C₇H₆O₂",
+  "sustituyentes": [
+   "carboxi"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "benzaldehído",
+  "formula": "C₇H₆O",
+  "sustituyentes": [
+   "formil"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "ácido bencenosulfónico",
+  "formula": "C₆H₆O₃S",
+  "sustituyentes": [
+   "sulfo"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "1,2-dibromobenceno",
+  "formula": "C₆H₄Br₂",
+  "sustituyentes": [
+   "bromo",
+   "bromo"
+  ],
+  "variantes": [
+   "o-dibromobenceno"
+  ]
+ },
+ {
+  "nombre": "1,3-dibromobenceno",
+  "formula": "C₆H₄Br₂",
+  "sustituyentes": [
+   "bromo",
+   "bromo"
+  ],
+  "variantes": [
+   "m-dibromobenceno"
+  ]
+ },
+ {
+  "nombre": "1,4-diclorobenceno",
+  "formula": "C₆H₄Cl₂",
+  "sustituyentes": [
+   "cloro",
+   "cloro"
+  ],
+  "variantes": [
+   "p-diclorobenceno"
+  ]
+ },
+ {
+  "nombre": "1,3-dinitrobenceno",
+  "formula": "C₆H₄N₂O₄",
+  "sustituyentes": [
+   "nitro",
+   "nitro"
+  ],
+  "variantes": [
+   "m-dinitrobenceno"
+  ]
+ },
+ {
+  "nombre": "1,2-dimetilbenceno",
+  "formula": "C₈H₁₀",
+  "sustituyentes": [
+   "metil",
+   "metil"
+  ],
+  "variantes": [
+   "o-xileno"
+  ]
+ },
+ {
+  "nombre": "1,3-dimetilbenceno",
+  "formula": "C₈H₁₀",
+  "sustituyentes": [
+   "metil",
+   "metil"
+  ],
+  "variantes": [
+   "m-xileno"
+  ]
+ },
+ {
+  "nombre": "1,4-dimetilbenceno",
+  "formula": "C₈H₁₀",
+  "sustituyentes": [
+   "metil",
+   "metil"
+  ],
+  "variantes": [
+   "p-xileno"
+  ]
+ },
+ {
+  "nombre": "1,3,5-trimetilbenceno",
+  "formula": "C₉H₁₂",
+  "sustituyentes": [
+   "metil",
+   "metil",
+   "metil"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "1,2,4-trimetilbenceno",
+  "formula": "C₉H₁₂",
+  "sustituyentes": [
+   "metil",
+   "metil",
+   "metil"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "2,4,6-trinitrotolueno",
+  "formula": "C₇H₅N₃O₆",
+  "sustituyentes": [
+   "metil",
+   "nitro",
+   "nitro",
+   "nitro"
+  ],
+  "variantes": [
+   "2-metil-1,3,5-trinitrobenceno"
+  ]
+ },
+ {
+  "nombre": "4-nitrotolueno",
+  "formula": "C₇H₇NO₂",
+  "sustituyentes": [
+   "metil",
+   "nitro"
+  ],
+  "variantes": [
+   "p-nitrotolueno",
+   "1-metil-4-nitrobenceno"
+  ]
+ },
+ {
+  "nombre": "2-nitrotolueno",
+  "formula": "C₇H₇NO₂",
+  "sustituyentes": [
+   "metil",
+   "nitro"
+  ],
+  "variantes": [
+   "o-nitrotolueno"
+  ]
+ },
+ {
+  "nombre": "2-clorotolueno",
+  "formula": "C₇H₇Cl",
+  "sustituyentes": [
+   "metil",
+   "cloro"
+  ],
+  "variantes": [
+   "o-clorotolueno",
+   "1-cloro-2-metilbenceno"
+  ]
+ },
+ {
+  "nombre": "3-cloroanilina",
+  "formula": "C₆H₆ClN",
+  "sustituyentes": [
+   "amino",
+   "cloro"
+  ],
+  "variantes": [
+   "m-cloroanilina"
+  ]
+ },
+ {
+  "nombre": "4-bromofenol",
+  "formula": "C₆H₅BrO",
+  "sustituyentes": [
+   "hidroxi",
+   "bromo"
+  ],
+  "variantes": [
+   "p-bromofenol"
+  ]
+ },
+ {
+  "nombre": "2,4-dinitrofenol",
+  "formula": "C₆H₄N₂O₅",
+  "sustituyentes": [
+   "hidroxi",
+   "nitro",
+   "nitro"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "2,4,6-tribromofenol",
+  "formula": "C₆H₃Br₃O",
+  "sustituyentes": [
+   "hidroxi",
+   "bromo",
+   "bromo",
+   "bromo"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "4-metilfenol",
+  "formula": "C₇H₈O",
+  "sustituyentes": [
+   "hidroxi",
+   "metil"
+  ],
+  "variantes": [
+   "p-metilfenol"
+  ]
+ },
+ {
+  "nombre": "3-nitroanilina",
+  "formula": "C₆H₆N₂O₂",
+  "sustituyentes": [
+   "amino",
+   "nitro"
+  ],
+  "variantes": [
+   "m-nitroanilina"
+  ]
+ },
+ {
+  "nombre": "ácido 2-hidroxibenzoico",
+  "formula": "C₇H₆O₃",
+  "sustituyentes": [
+   "carboxi",
+   "hidroxi"
+  ],
+  "variantes": [
+   "ácido o-hidroxibenzoico"
+  ]
+ },
+ {
+  "nombre": "ácido 4-aminobenzoico",
+  "formula": "C₇H₇NO₂",
+  "sustituyentes": [
+   "carboxi",
+   "amino"
+  ],
+  "variantes": [
+   "ácido p-aminobenzoico"
+  ]
+ },
+ {
+  "nombre": "ácido 3-nitrobenzoico",
+  "formula": "C₇H₅NO₄",
+  "sustituyentes": [
+   "carboxi",
+   "nitro"
+  ],
+  "variantes": [
+   "ácido m-nitrobenzoico"
+  ]
+ },
+ {
+  "nombre": "ácido 3,5-dinitrobenzoico",
+  "formula": "C₇H₄N₂O₆",
+  "sustituyentes": [
+   "carboxi",
+   "nitro",
+   "nitro"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "4-nitrobenzaldehído",
+  "formula": "C₇H₅NO₃",
+  "sustituyentes": [
+   "formil",
+   "nitro"
+  ],
+  "variantes": [
+   "p-nitrobenzaldehído"
+  ]
+ },
+ {
+  "nombre": "ácido 4-metilbencenosulfónico",
+  "formula": "C₇H₈O₃S",
+  "sustituyentes": [
+   "sulfo",
+   "metil"
+  ],
+  "variantes": [
+   "ácido p-metilbencenosulfónico"
+  ]
+ },
+ {
+  "nombre": "1-bromo-4-clorobenceno",
+  "formula": "C₆H₄BrCl",
+  "sustituyentes": [
+   "bromo",
+   "cloro"
+  ],
+  "variantes": [
+   "p-bromoclorobenceno"
+  ]
+ },
+ {
+  "nombre": "1-etil-2-metilbenceno",
+  "formula": "C₉H₁₂",
+  "sustituyentes": [
+   "etil",
+   "metil"
+  ],
+  "variantes": [
+   "o-etilmetilbenceno"
+  ]
+ },
+ {
+  "nombre": "4-bromo-1,2-dimetilbenceno",
+  "formula": "C₈H₉Br",
+  "sustituyentes": [
+   "bromo",
+   "metil",
+   "metil"
+  ],
+  "variantes": []
+ },
+ {
+  "nombre": "1,2,3,4,5,6-hexaclorobenceno",
+  "formula": "C₆Cl₆",
+  "sustituyentes": [
+   "cloro",
+   "cloro",
+   "cloro",
+   "cloro",
+   "cloro",
+   "cloro"
+  ],
+  "variantes": [
+   "hexaclorobenceno"
+  ]
+ }
+]
