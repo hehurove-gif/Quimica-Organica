@@ -46,6 +46,19 @@ await p.screenshot({ path: '/tmp/shot-constructor2.png', fullPage: true });
 // aromáticos: hexágono, fórmula condensada y sin botón de constructor de cadena
 await p.click('#tab-nombre');
 await p.fill('#nombre', '2,4,6-trinitrotolueno');
-console.log('aromático svg átomos:', await p.locator('#svg .atom').count(), '| semi:', (await p.textContent('#semi')).trim(), '| botón constructor oculto:', await p.isHidden('#a-constructor'));
+console.log('aromático svg átomos:', await p.locator('#svg .atom').count(), '| semi:', (await p.textContent('#semi')).trim(), '| botón constructor visible:', await p.isVisible('#a-constructor'));
+// constructor de anillo
+await p.click('#tab-constructor');
+await p.click('#c-modo-anillo');
+await p.click('[data-rej="0"]');
+console.log('anillo: estado', (await p.textContent('#c-estado')).trim().slice(0, 40), '| nombres:', (await p.textContent('#c-nombres')).trim().replace(/\s+/g, ' ').slice(0, 80));
+await p.fill('#c-nombre', 'p-nitrotolueno');
+console.log('anillo veredicto:', (await p.textContent('#c-veredicto')).trim().slice(0, 60));
+await p.selectOption('#c-anillo .carbono >> nth=2 >> select', 'bromo');
+console.log('anillo editado:', (await p.textContent('#c-nombres')).trim().replace(/\s+/g, ' ').slice(0, 90));
+await p.click('#c-a-nombre');
+console.log('→ nombre:', await p.inputValue('#nombre'), '| botón constructor visible:', await p.isVisible('#a-constructor'));
+await p.click('#a-constructor');
+console.log('de vuelta, modo anillo visible:', await p.isVisible('#c-anillo'));
 console.log('errores de consola:', errs);
 await b.close();

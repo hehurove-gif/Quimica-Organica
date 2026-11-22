@@ -1,6 +1,7 @@
 // @ts-check
 import {
-  GROUPS, MAX_CHAIN, emptyDraft, setLength, setBond, addGroup, removeGroup, describe, verify,
+  GROUPS, MAX_CHAIN, RING_SUBS, emptyDraft, setLength, setBond, addGroup, removeGroup, describe, verify,
+  emptyRing, setRingSub,
 } from '../core/construct.js';
 import { renderSvg, semidesarrollada } from '../core/render.js';
 import { showView } from './vistas.js';
@@ -13,6 +14,11 @@ const practica = /** @type {HTMLInputElement} */ ($('c-practica'));
 
 /** @type {import('../core/construct.js').Draft} */
 let draft = emptyDraft(4);
+/** @type {import('../core/construct.js').RingDraft} */
+let ringDraft = emptyRing();
+let modoAnillo = false;
+/** Borrador activo según el modo. */
+const cur = () => (modoAnillo ? ringDraft : draft);
 let revelada = false;
 
 /** @param {string} tag @param {string} [cls] @param {string} [text] */
@@ -32,9 +38,9 @@ const EJEMPLOS = /** @type {[number, [number, string][], [number, 1 | 2 | 3][]][
   [4, [[1, 'OH']], [[3, 2]]],
 ]);
 
-/** @param {import('../core/construct.js').Draft} d */
+/** @param {import('../core/construct.js').Draft | import('../core/construct.js').RingDraft} d */
 export function loadDraft(d) {
-  draft = d;
+  if ('ring' in d) { ringDraft = d; modoAnillo = true; } else { draft = d; modoAnillo = false; }
   revelada = false;
   nombreIn.value = '';
   render();
@@ -100,11 +106,32 @@ function renderCadena() {
   }
 }
 
+/** Editor del anillo: una lista desplegable por posición (1-6). */
+function renderAnillo() {
+  const box = $('c-anillo');
+  box.replaceChildren();
+  ringDraft.subs.forEach((name, k) => {
+    const col = el('div', 'carbono');
+    col.append(el('div', 'c', `C${k + 1}`));
+    const sel = /** @type {HTMLSelectElement} */ (el('select'));
+    sel.setAttribute('aria-label', `Sustituyente en la posición ${k + 1}`);
+    sel.append(Object.assign(el('option', '', '— H'), { value: '' }));
+    for (const s of RING_SUBS) sel.append(Object.assign(el('option', '', `${s.name} (${s.label})`), { value: s.name }));
+    sel.value = name ?? '';
+    sel.addEventListener('change', () => {
+      ringDraft = setRingSub(ringDraft, k + 1, sel.value || null);
+      render();
+    });
+    col.append(sel);
+    box.append(col);
+  });
+}
+
 /** Veredicto de «Verifica mi respuesta». */
 function renderVeredicto() {
   const box = $('c-veredicto');
   box.replaceChildren();
-  const v = verify(draft, nombreIn.value);
+  const v = verify(cur(), nombreIn.value);
   const claseDe = { correcta: 'ok', correcta_con_avisos: 'aviso', isomero: 'mal', distinta: 'mal', no_se_entiende: 'info', sin_estructura: 'mal', vacio: '' };
   if (v.verdict === 'vacio') return v;
   const d = el('div', `v ${claseDe[v.verdict]}`);
@@ -122,11 +149,18 @@ function renderVeredicto() {
 }
 
 function render() {
-  nSlider.value = String(draft.n);
-  $('c-n-out').textContent = String(draft.n);
-  renderCadena();
+  $('c-cadena-box').hidden = modoAnillo;
+  $('c-anillo-box').hidden = !modoAnillo;
+  $('c-modo-cadena').setAttribute('aria-pressed', String(!modoAnillo));
+  $('c-modo-anillo').setAttribute('aria-pressed', String(modoAnillo));
+  if (modoAnillo) renderAnillo();
+  else {
+    nSlider.value = String(draft.n);
+    $('c-n-out').textContent = String(draft.n);
+    renderCadena();
+  }
 
-  const r = describe(draft);
+  const r = describe(cur());
   const estado = $('c-estado');
   estado.className = `estado ${r.status}`;
   estado.replaceChildren();
@@ -139,8 +173,8 @@ function render() {
   $('c-resultado').hidden = false;
   const a = /** @type {import('../core/analyze.js').Analysis} */ (r.analysis);
   const mol = /** @type {import('../core/molecule.js').Molecule} */ (a.molecule);
-  $('c-svg').innerHTML = renderSvg(mol, a.chain, { locants: locChk.checked });
-  $('c-semi').textContent = semidesarrollada(mol, a.chain, {});
+  $('c-svg').innerHTML = a.aromatic ? a.aromatic.svg({ locants: locChk.checked }) : renderSvg(mol, a.chain, { locants: locChk.checked });
+  $('c-semi').textContent = a.aromatic ? a.semidesarrollada || '' : semidesarrollada(mol, a.chain, {});
 
   const v = renderVeredicto();
   const oculto = practica.checked && !revelada && v.verdict !== 'correcta' && v.verdict !== 'correcta_con_avisos';
@@ -189,6 +223,23 @@ $('c-revelar').addEventListener('click', () => {
   render();
 });
 $('c-limpiar').addEventListener('click', () => loadDraft(emptyDraft(4)));
+$('c-limpiar-anillo').addEventListener('click', () => loadDraft(emptyRing()));
+$('c-modo-cadena').addEventListener('click', () => loadDraft(draft));
+$('c-modo-anillo').addEventListener('click', () => loadDraft(ringDraft));
+/** Ejemplos del anillo: [posición, sustituyente][] */
+const EJ_ANILLO = /** @type {[number, string][][]} */ ([
+  [[1, 'metil'], [2, 'nitro'], [4, 'nitro'], [6, 'nitro']],
+  [[1, 'carboxi'], [2, 'hidroxi']],
+  [[1, 'metil'], [3, 'metil'], [5, 'metil']],
+  [[1, 'metil'], [4, 'nitro']],
+]);
+document.querySelectorAll('[data-rej]').forEach((b) =>
+  b.addEventListener('click', () => {
+    let d = emptyRing();
+    for (const [p, n] of EJ_ANILLO[Number(b.getAttribute('data-rej'))]) d = setRingSub(d, p, n);
+    loadDraft(d);
+  }),
+);
 document.querySelectorAll('[data-cej]').forEach((b) =>
   b.addEventListener('click', () => {
     const [n, gs, bs] = EJEMPLOS[Number(b.getAttribute('data-cej'))];
@@ -199,7 +250,7 @@ document.querySelectorAll('[data-cej]').forEach((b) =>
   }),
 );
 $('c-a-nombre').addEventListener('click', () => {
-  const nombre = describe(draft).canonicalName;
+  const nombre = describe(cur()).canonicalName;
   if (!nombre) return;
   document.dispatchEvent(new CustomEvent('abrir-nombre', { detail: nombre }));
   showView('nombre');

@@ -90,3 +90,9 @@ input[type=range] { width: 100%; }
 .veredicto .v.mal { background: var(--err-bg); color: var(--err); }
 .veredicto .v.info { background: var(--info-bg); color: var(--info); }
 #c-a-nombre { margin-top: 10px; }
+
+.modo { display: flex; gap: 8px; margin-bottom: 10px; }
+.modo .btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); font-weight: 700; }
+.anillo { flex-wrap: wrap; gap: 8px; }
+.anillo .carbono { min-width: 120px; }
+.anillo .carbono select { max-width: 140px; }

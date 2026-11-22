@@ -1,7 +1,7 @@
 // @ts-check
 import { analyze } from '../core/analyze.js';
 import { renderSvg, semidesarrollada } from '../core/render.js';
-import { moleculeToDraft } from '../core/construct.js';
+import { moleculeToDraft, moleculeToRing } from '../core/construct.js';
 import { showView } from './vistas.js';
 import { loadDraft } from './constructor.js';
 
@@ -126,7 +126,7 @@ function update() {
   }
   $('resultado').hidden = false;
   const aCons = $('a-constructor');
-  aCons.hidden = !!a.aromatic || !moleculeToDraft(a.molecule, a.chain);
+  aCons.hidden = !(a.aromatic ? moleculeToRing(a.molecule) : moleculeToDraft(a.molecule, a.chain));
   renderDrawing();
   renderSemi();
 
@@ -181,7 +181,7 @@ document.querySelectorAll('[data-ej]').forEach((b) =>
 );
 $('a-constructor').addEventListener('click', () => {
   if (!current || !current.molecule) return;
-  const d = moleculeToDraft(current.molecule, current.chain);
+  const d = current.aromatic ? moleculeToRing(current.molecule) : moleculeToDraft(current.molecule, current.chain);
   if (!d) return;
   loadDraft(d);
   showView('constructor');
