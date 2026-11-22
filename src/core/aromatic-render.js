@@ -149,9 +149,10 @@ export function renderRingSvg(mol, ringOrder, groups, opts = {}) {
         lowered = false;
       }
     }
-    // la etiqueta se centra tras el extremo del enlace, separada por su semiancho/semialto
-    const lx = bx + p.ux * (w / 2 * Math.abs(p.ux) + 2);
-    const ly = by + p.uy * (h / 2 * Math.abs(p.uy) + 2);
+    // la etiqueta queda pegada al extremo del enlace: a un lado si el vértice es lateral, encima/debajo si no
+    const side = Math.abs(p.ux) > 0.5;
+    const lx = side ? bx + Math.sign(p.ux) * (w / 2 + 3) : bx;
+    const ly = side ? by : by + Math.sign(p.uy) * (h / 2 + 2);
     atoms.push(
       `<g class="atom el-${g.sub.kind === 'frag' ? 'X' : 'N'}" data-atom="${g.atomIds[0]}"><rect class="hit" x="${f(lx - w / 2 - 3)}" y="${f(ly - h / 2 - 3)}" width="${f(w + 6)}" height="${f(h + 6)}" rx="4"/><text x="${f(lx)}" y="${f(ly)}">${inner}</text></g>`,
     );
@@ -166,7 +167,7 @@ export function renderRingSvg(mol, ringOrder, groups, opts = {}) {
   if (opts.locants) {
     for (let k = 0; k < 6; k++) {
       const p = vert(k);
-      locs.push(`<text class="locant" x="${f(p.x * 0.62)}" y="${f(p.y * 0.62)}">${k + 1}</text>`);
+      locs.push(`<text class="locant" x="${f(p.x * 0.45)}" y="${f(p.y * 0.45)}">${k + 1}</text>`);
     }
   }
   const pad = 22;

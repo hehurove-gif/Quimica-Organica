@@ -147,6 +147,7 @@ const CATALOG_KEYS = (() => {
  * @returns {Draft | null}
  */
 export function moleculeToDraft(mol, chain) {
+  if (!mol.isTree()) return null; // anillos: todavía no se editan en el constructor de cadena
   if (chain.length < 1 || chain.length > MAX_CHAIN) return null;
   if (chain.some((id) => mol.element(id) !== 'C')) return null;
   /** @type {(1 | 2 | 3)[]} */

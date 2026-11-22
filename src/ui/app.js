@@ -31,6 +31,7 @@ function el(tag, cls, text) {
 /** Fórmula semidesarrollada en una línea, comprimida o no según el botón. */
 function renderSemi() {
   if (!current || !current.molecule) return;
+  if (current.aromatic) { $('semi').textContent = current.semidesarrollada || ''; return; }
   $('semi').textContent = semidesarrollada(current.molecule, current.chain, { compress: compChk.checked });
 }
 
@@ -84,7 +85,9 @@ function renderLeido(/** @type {string} */ text, /** @type {import('../core/anal
 function renderDrawing() {
   const a = current;
   if (!a || !a.molecule) return;
-  $('svg').innerHTML = renderSvg(a.molecule, a.chain, { locants: locChk.checked, compress: compChk.checked });
+  $('svg').innerHTML = a.aromatic
+    ? a.aromatic.svg({ locants: locChk.checked })
+    : renderSvg(a.molecule, a.chain, { locants: locChk.checked, compress: compChk.checked });
   $('svg').querySelectorAll('[data-atom]').forEach((g) => {
     const id = Number(g.getAttribute('data-atom'));
     g.addEventListener('mouseenter', () => {
@@ -123,7 +126,7 @@ function update() {
   }
   $('resultado').hidden = false;
   const aCons = $('a-constructor');
-  aCons.hidden = !moleculeToDraft(a.molecule, a.chain);
+  aCons.hidden = !!a.aromatic || !moleculeToDraft(a.molecule, a.chain);
   renderDrawing();
   renderSemi();
 
