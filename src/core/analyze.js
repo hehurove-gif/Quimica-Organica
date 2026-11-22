@@ -13,6 +13,7 @@ import { nameMolecule, diagnose, aminaComoPrefijoOf } from './namer.js';
 import { semidesarrollada } from './render.js';
 import { explain } from './explain.js';
 import { commonNamesOf } from './lexicon.js';
+import { analyzeAromatic } from './aromatic-analysis.js';
 
 /**
  * @typedef {import('./parser.js').Ast} Ast
@@ -34,6 +35,7 @@ import { commonNamesOf } from './lexicon.js';
  *   formula: string | null,
  *   semidesarrollada: string | null,
  *   steps: import('./explain.js').Step[],
+ *   aromatic?: import('./aromatic-analysis.js').AromaticView | null,
  * }} Analysis
  */
 
@@ -50,6 +52,8 @@ export function analyze(text) {
     status: 'vacio', errors: [], notes: [], ast: null, molecule: null, chain: [], trace: [],
     names: null, correcto: false, formula: null, semidesarrollada: null, steps: [],
   };
+  const ar = analyzeAromatic(text, base);
+  if (ar) return ar;
   const p = parse(text);
   if (p.status !== 'valido' || !p.ast) {
     return { ...base, status: p.status, errors: p.errors };

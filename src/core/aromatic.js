@@ -332,6 +332,7 @@ const ALKYL = new Set(['metil', 'etil', 'propil', 'isopropil', 'butil', 'isobuti
  *   parent: string,
  *   ringOrder: number[],
  *   placed: Placed[],
+ *   groups: { pos: number, sub: SubSpec, atomIds: number[] }[],
  * } | { ok: false, reason: string }} AromName
  */
 
@@ -396,25 +397,45 @@ function prefixText(items, omitLocants, joiner = '-') {
 }
 
 /**
+ * Lee el anillo y sus sustituyentes (del catálogo).
+ * @param {Molecule} mol
+ * @returns {{ ring: number[], subs: { idx: number, sub: SubSpec, atomIds: number[] }[] } | { error: string }}
+ */
+export function readRing(mol) {
+  const r = mol.benzeneRing();
+  if (!r) return { error: 'no es un anillo de benceno con sustituyentes sencillos' };
+  const { ring, alive } = r;
+  /** @type {{ idx: number, sub: SubSpec, atomIds: number[] }[]} */
+  const subs = [];
+  for (let idx = 0; idx < 6; idx++) {
+    for (const nb of mol.neighbors(ring[idx])) {
+      if (alive.has(nb.id)) continue;
+      const sub = SUB_KEYS.get(`${nb.order}${mol._rooted(nb.id, ring[idx], '')}`);
+      if (!sub) return { error: 'tiene un sustituyente que todavía no está soportado en anillos' };
+      // átomos de la rama
+      /** @type {number[]} */
+      const atomIds = [];
+      const walk = (/** @type {number} */ id, /** @type {number} */ from) => {
+        atomIds.push(id);
+        for (const x of mol.neighbors(id)) if (x.id !== from) walk(x.id, id);
+      };
+      walk(nb.id, ring[idx]);
+      subs.push({ idx, sub, atomIds });
+    }
+  }
+  return { ring, subs };
+}
+
+/**
  * Nombra un benceno sustituido (IUPAC: grupo principal en C1, menor conjunto de localizadores,
  * orden alfabético). Devuelve `ok: false` con el motivo si algo no está soportado.
  * @param {Molecule} mol
  * @returns {AromName}
  */
 export function nameAromatic(mol) {
-  const r = mol.benzeneRing();
-  if (!r) return { ok: false, reason: 'no es un anillo de benceno con sustituyentes sencillos' };
-  const { ring, alive } = r;
-  /** @type {{ idx: number, sub: SubSpec }[]} */
-  const subs = [];
-  for (let idx = 0; idx < 6; idx++) {
-    for (const nb of mol.neighbors(ring[idx])) {
-      if (alive.has(nb.id)) continue;
-      const sub = SUB_KEYS.get(`${nb.order}${mol._rooted(nb.id, ring[idx], '')}`);
-      if (!sub) return { ok: false, reason: 'tiene un sustituyente que todavía no está soportado en anillos' };
-      subs.push({ idx, sub });
-    }
-  }
+  const rr = readRing(mol);
+  if ('error' in rr) return { ok: false, reason: rr.error };
+  const { ring, subs } = rr;
   const count = (/** @type {string} */ n) => subs.filter((x) => x.sub.name === n).length;
   const principal = PRIORITY.find((n) => count(n) > 0) ?? null;
   if (principal && count(principal) > 1) {
@@ -484,6 +505,7 @@ export function nameAromatic(mol) {
     alternatives: [...new Set(alternatives)].filter((a) => a !== sistematico),
     commons,
     parent: parentWord,
+    groups: main.placed.map((p) => ({ pos: p.pos, sub: p.sub, atomIds: /** @type {number[]} */ (subs.find((x, i) => x.sub === p.sub && main.num.pos[i] === p.pos)?.atomIds) })),
     ringOrder: Array.from({ length: 6 }, (_, k) => ring[(((main.num.s + main.num.d * k) % 6) + 6) % 6]),
     placed: main.placed,
   };
