@@ -32,7 +32,8 @@ for (const [i, e] of ORO.entries()) {
     assert.deepEqual([...obtenidos].sort(), [...esperados].sort(), `productos: ${res.equation}`);
     if (res.coefficients) {
       const left = [...res.substrates, ...res.reagents].map((s) => s.counts);
-      assert.ok(conserves(left, res.products.map((s) => s.counts), res.coefficients), 'átomos no conservados');
+      const eq = res.products.filter((p) => p.coef !== undefined); // las alternativas (otros isómeros) no están en la ecuación
+      assert.ok(conserves(left, eq.map((s) => s.counts), res.coefficients), 'átomos no conservados');
       if (e.c) assert.deepEqual([...res.coefficients.reactants, ...res.coefficients.products], e.c, res.equation ?? '');
     }
     // cada producto orgánico tiene nombre canónico
@@ -56,4 +57,19 @@ test('opciones y entradas inválidas se declaran, no se inventan', () => {
   assert.equal(react('reduccion', ['ácido etanoico'], {}).status, 'fuera_de_alcance');
   assert.equal(react('hidrogenacion', ['butano'], {}).status, 'sin_reaccion');
   assert.equal(react('nada', ['x']).status, 'invalido');
+});
+
+test('Markovnikov: empate de H da mezcla; Zaitsev: el minoritario se rotula; Cl₂ da mezcla, Br₂ elige', () => {
+  const m = react('markovnikov', ['2-penteno'], { reactivo: 'HBr' });
+  assert.deepEqual(m.products.map((p) => p.role), ['mezcla', 'mezcla']);
+  assert.deepEqual(react('markovnikov', ['2-buteno'], { reactivo: 'HBr' }).products.map((p) => p.name), ['2-bromobutano']);
+  const z = react('deshidratacion', ['2-pentanol']);
+  assert.deepEqual(z.products.map((p) => [p.name, p.role]).filter((x) => x[0] !== 'agua'), [['2-penteno', 'principal'], ['1-penteno', 'secundario']]);
+  const cl = react('halogenacion', ['butano'], { halogeno: 'Cl2' });
+  assert.ok(cl.products.filter((p) => p.kind === 'organic').every((p) => p.role === 'mezcla'));
+  const br = react('halogenacion', ['butano'], { halogeno: 'Br2' });
+  assert.deepEqual(br.products.filter((p) => p.kind === 'organic').map((p) => [p.name, p.role]), [['2-bromobutano', 'principal'], ['1-bromobutano', 'secundario']]);
+  assert.equal(react('deshidratacion', ['metanol']).status, 'sin_reaccion');
+  assert.equal(react('markovnikov', ['propino'], {}).status, 'fuera_de_alcance');
+  assert.equal(react('halogenacion', ['etanol'], {}).status, 'fuera_de_alcance');
 });

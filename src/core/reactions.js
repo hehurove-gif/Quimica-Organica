@@ -22,7 +22,7 @@ import { Molecule } from './molecule.js';
  * }} ReactionResult
  * @typedef {{ error: { status: Status, code: string, message: string }, steps?: string[] }
  *   | { products: Species[], reagents?: Species[], conditions?: string, steps: string[], notes?: string[],
- *       reversible?: boolean, noBalance?: boolean }} Outcome
+ *       alternatives?: Species[], reversible?: boolean, noBalance?: boolean }} Outcome
  * @typedef {{
  *   nombre: string, arity: number, ringOk?: boolean, accept?: Species['kind'][],
  *   run: (inputs: Species[], opts: Record<string, string>) => Outcome,
@@ -221,6 +221,129 @@ function oxidacion([s], opts) {
   return { products: [species(acid), inorganic('H2O')], reagents: [inorganic('[O]')], conditions, steps };
 }
 
+
+// ───────────────────────── grupo B: añadir/quitar átomos con regla de regioselectividad ─────────────────────────
+
+/**
+ * Agrupa productos por clave canónica (conserva el primero de cada clave).
+ * @template T @param {(T & { sp: Species })[]} list @returns {(T & { sp: Species })[]}
+ */
+function uniqueByKey(list) {
+  const seen = new Set();
+  return list.filter((x) => (seen.has(x.sp.key) ? false : (seen.add(x.sp.key), true)));
+}
+
+/** @type {ReactionDef['run']} */
+function markovnikov([s], opts) {
+  const mol = /** @type {Molecule} */ (s.mol);
+  const rea = choose(opts, 'reactivo', ['HCl', 'HBr', 'HI', 'H2O'], 'HBr');
+  if ('error' in rea) return rea.error;
+  const dbl = multipleCC(mol);
+  if (!dbl.length) return fail('sin_reaccion', 'sin_alqueno', 'No hay un doble enlace C=C al que adicionar.', ['Se busca un enlace C=C: no existe en esta molécula.']);
+  if (dbl.some((b) => b.order === 3)) return fail('fuera_de_alcance', 'alquino', 'La adición a alquinos no está en el compendio: solo alquenos.');
+  if (dbl.length > 1) return fail('fuera_de_alcance', 'varios_dobles', 'Hay varios enlaces C=C: todavía no elijo cuál reacciona.');
+  const { a, b } = dbl[0];
+  const ha = mol.implicitH(a);
+  const hb = mol.implicitH(b);
+  // X (o –OH) va al carbono con menos H; H al que ya tiene más
+  const targets = ha > hb ? [b] : hb > ha ? [a] : [a, b];
+  const sym = rea.value === 'H2O' ? 'O' : rea.value.slice(1);
+  const made = uniqueByKey(targets.map((t) => {
+    const m = mol.clone();
+    m.setBond(a, b, 1);
+    const x = m.addAtom(sym);
+    m.addBond(t, x, 1);
+    return { sp: species(m) };
+  }));
+  const role = made.length > 1 ? 'mezcla' : 'principal';
+  const all = made.map((x) => ({ ...x.sp, role: /** @type {'principal' | 'mezcla'} */ (role) }));
+  const steps = [
+    `Se localiza el doble enlace C=C; los carbonos tienen ${ha} y ${hb} H.`,
+    `El reactivo ${rea.value === 'H2O' ? 'H–OH (medio ácido)' : rea.value} es asimétrico y se adiciona al C=C, que pasa a enlace simple.`,
+    ha === hb
+      ? 'Regla de Markovnikov: los dos carbonos tienen los mismos H, así que la regla no decide y se obtiene una mezcla (si los productos son distintos).'
+      : `Regla de Markovnikov: el H se une al carbono que ya tiene más H (${Math.max(ha, hb)}) y ${rea.value === 'H2O' ? 'el –OH' : 'el halógeno'} al carbono más sustituido.`,
+  ];
+  const notes = made.length > 1 ? ['Sin diferencia de H entre los carbonos del doble enlace, Markovnikov no elige: se forman ambos productos.'] : [];
+  return {
+    products: [all[0]], alternatives: all.slice(1), reagents: [inorganic(rea.value)],
+    conditions: rea.value === 'H2O' ? 'H⁺' : '', steps, notes,
+  };
+}
+
+/** @type {ReactionDef['run']} */
+function deshidratacion([s]) {
+  const mol = /** @type {Molecule} */ (s.mol);
+  const sites = alcoholSites(mol);
+  if (!sites.length) return fail('sin_reaccion', 'sin_alcohol', 'No hay un grupo –OH de alcohol que eliminar.', ['Se busca un –OH sobre un carbono saturado: no existe.']);
+  if (sites.length > 1) return fail('fuera_de_alcance', 'polialcohol', 'Hay varios –OH: todavía no elijo cuál eliminar.');
+  const { o, c } = sites[0];
+  const beta = cNeighbors(mol, c).filter((n) => mol.implicitH(n.id) >= 1 && mol.neighbors(n.id).every((x) => x.order === 1));
+  if (!beta.length) return fail('sin_reaccion', 'sin_beta', 'Ningún carbono vecino al del –OH tiene H, así que no puede formarse un doble enlace.', ['Se busca un H en los carbonos vecinos al del –OH: no hay ninguno.']);
+  const made = uniqueByKey(beta.map((n) => {
+    const { mol: m, map } = mol.without([o]);
+    m.setBond(/** @type {number} */ (map.get(c)), /** @type {number} */ (map.get(n.id)), 2);
+    return { sp: species(m), h: mol.implicitH(n.id) };
+  }));
+  const minH = Math.min(...made.map((x) => x.h));
+  const principals = made.filter((x) => x.h === minH);
+  const role = principals.length > 1 ? 'mezcla' : 'principal';
+  const out = [
+    ...principals.map((x) => ({ ...x.sp, role: /** @type {'principal' | 'mezcla'} */ (role) })),
+    ...made.filter((x) => x.h !== minH).map((x) => ({ ...x.sp, role: /** @type {'secundario'} */ ('secundario') })),
+  ];
+  const steps = [
+    'Se localiza el –OH y el carbono que lo lleva; el medio ácido (H₂SO₄) y el calor lo eliminan junto con un H vecino (se sale H₂O).',
+    `Carbonos vecinos con H: ${beta.map((n) => `${mol.implicitH(n.id)} H`).join(', ')}.`,
+    made.length === 1
+      ? 'Solo hay un alqueno posible.'
+      : 'Regla de Zaitsev: se pierde el H del carbono vecino con menos H; así el doble enlace queda en el carbono más sustituido y el alqueno es más estable.',
+  ];
+  const notes = ['El compendio no distingue cis/trans: la estereoquímica queda fuera de alcance.'];
+  if (made.length > 1) notes.push('Los alquenos «secundarios» se forman en menor cantidad.');
+  return { products: [out[0], inorganic('H2O')], alternatives: out.slice(1), conditions: 'H₂SO₄, calor', steps, notes };
+}
+
+/** @type {ReactionDef['run']} */
+function halogenacion([s], opts) {
+  const mol = /** @type {Molecule} */ (s.mol);
+  const hal = choose(opts, 'halogeno', ['Cl2', 'Br2'], 'Cl2');
+  if ('error' in hal) return hal.error;
+  if (!isAlkane(mol)) return fail('fuera_de_alcance', 'no_alcano', 'La halogenación radicalar del compendio es solo de alcanos acíclicos (solo C e H, enlaces simples).');
+  const x = hal.value.slice(0, -1);
+  const made = uniqueByKey(mol.atoms.filter((a) => mol.implicitH(a.id) >= 1).map((a) => {
+    const m = mol.clone();
+    const h = m.addAtom(x);
+    m.addBond(a.id, h, 1);
+    return { sp: species(m), deg: cNeighbors(mol, a.id).length };
+  })).sort((p, q) => q.deg - p.deg);
+  const top = made.filter((m) => m.deg === made[0].deg);
+  /** @type {Species[]} */
+  let out;
+  /** @type {string[]} */
+  const notes = ['Con exceso de halógeno pueden sustituirse más H (polisustitución); aquí se muestra la monosustitución.'];
+  if (hal.value === 'Br2') {
+    const role = top.length > 1 ? 'mezcla' : 'principal';
+    out = [
+      ...top.map((m) => ({ ...m.sp, role: /** @type {'principal' | 'mezcla'} */ (role) })),
+      ...made.filter((m) => m.deg !== made[0].deg).map((m) => ({ ...m.sp, role: /** @type {'secundario'} */ ('secundario') })),
+    ];
+  } else {
+    out = made.map((m) => ({ ...m.sp, role: /** @type {'principal' | 'mezcla'} */ (made.length > 1 ? 'mezcla' : 'principal') }));
+    if (made.length > 1) notes.push('El cloro es poco selectivo: se obtiene una mezcla de todos los isómeros, aunque el H terciario se sustituye algo más fácil.');
+  }
+  const steps = [
+    `La luz ultravioleta rompe ${hal.value} en dos átomos radicales ${x}•.`,
+    `Un radical ${x}• arranca un H del alcano y el radical alquilo resultante toma un átomo de ${x} de otra molécula ${hal.value}: se sustituye H por ${x} y se libera ${'H' + x}.`,
+    made.length === 1
+      ? 'Todos los H son equivalentes: hay un único producto monosustituido.'
+      : hal.value === 'Br2'
+        ? 'El bromo es selectivo: sustituye preferentemente el H del carbono más sustituido (terciario > secundario > primario).'
+        : 'Hay varios tipos de H distintos, así que hay varios productos posibles.',
+  ];
+  return { products: [out[0], inorganic('H' + x)], alternatives: out.slice(1), reagents: [inorganic(hal.value)], conditions: 'luz UV (hν)', steps, notes };
+}
+
 // ───────────────────────── registro y ensamblado ─────────────────────────
 
 /** @type {Record<string, ReactionDef>} */
@@ -228,6 +351,9 @@ export const REACTIONS = {
   oxidacion: { nombre: 'Oxidación de alcoholes', arity: 1, run: oxidacion },
   reduccion: { nombre: 'Reducción de aldehídos y cetonas', arity: 1, run: reduccion },
   hidrogenacion: { nombre: 'Hidrogenación catalítica de alquenos y alquinos', arity: 1, run: hidrogenacion },
+  markovnikov: { nombre: 'Adición electrofílica a alquenos (Markovnikov)', arity: 1, run: markovnikov },
+  deshidratacion: { nombre: 'Deshidratación de alcoholes (Zaitsev)', arity: 1, run: deshidratacion },
+  halogenacion: { nombre: 'Halogenación radicalar de alcanos', arity: 1, run: halogenacion },
 };
 
 const SUBS = '₀₁₂₃₄₅₆₇₈₉';
@@ -285,7 +411,7 @@ export function react(id, names, opts = {}) {
     return { ...base, substrates: inputs, status: out.error.status, errors: [{ code: out.error.code, message: out.error.message }], steps: out.steps ?? [] };
   }
   const reagents = out.reagents ?? [];
-  for (const p of out.products) {
+  for (const p of [...out.products, ...(out.alternatives ?? [])]) {
     const issues = p.mol && p.kind !== 'polymer' ? p.mol.validate().filter((i) => !(p.kind === 'salt' && i.code === 'carga')) : [];
     if (issues.length) {
       return { ...base, substrates: inputs, status: 'invalido', errors: [{ code: 'producto_invalido', message: `Error interno: el producto «${nameText(p)}» no es una estructura válida (${issues[0].message}).` }] };
@@ -311,7 +437,7 @@ export function react(id, names, opts = {}) {
     ...base,
     substrates: L.slice(0, inputs.length),
     reagents: L.slice(inputs.length),
-    products: R,
+    products: [...R, ...(out.alternatives ?? [])],
     conditions: out.conditions ?? '',
     reversible: !!out.reversible,
     coefficients: coef,
