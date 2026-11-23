@@ -16,8 +16,9 @@ test('constructor de anillo: describe nombra y cierra la ida y vuelta', () => {
   assert.equal(describe(ring([[3, 'carboxi'], [5, 'hidroxi']])).canonicalName, 'ácido 3-hidroxibenzoico');
 });
 
-test('constructor de anillo: dos grupos principales iguales → fuera de alcance, sin inventar nombre', () => {
-  const r = describe(ring([[1, 'hidroxi'], [2, 'hidroxi']]));
+test('constructor de anillo: diol se nombra; diácido con otro sustituyente → fuera de alcance, sin inventar nombre', () => {
+  assert.equal(describe(ring([[1, 'hidroxi'], [3, 'hidroxi']])).canonicalName, '1,3-dihidroxibenceno');
+  const r = describe(ring([[1, 'carboxi'], [2, 'carboxi'], [4, 'nitro']]));
   assert.equal(r.status, 'fuera_de_alcance');
   assert.equal(r.canonicalName, null);
 });

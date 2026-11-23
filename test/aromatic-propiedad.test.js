@@ -24,7 +24,7 @@ function rng(seed) {
 const ATOMS = /** @type {Record<string, Record<string, number>>} */ ({
   fluoro: { F: 1 }, cloro: { Cl: 1 }, bromo: { Br: 1 }, yodo: { I: 1 }, nitro: { N: 1, O: 2 }, sulfo: { S: 1, O: 3, H: 1 },
   hidroxi: { O: 1, H: 1 }, amino: { N: 1, H: 2 }, formil: { C: 1, H: 1, O: 1 }, carboxi: { C: 1, O: 2, H: 1 },
-  metoxi: { O: 1, C: 1, H: 3 }, etoxi: { O: 1, C: 2, H: 5 }, metil: { C: 1, H: 3 }, etil: { C: 2, H: 5 }, propil: { C: 3, H: 7 },
+  metoxi: { O: 1, C: 1, H: 3 }, etoxi: { O: 1, C: 2, H: 5 }, etenil: { C: 2, H: 3 }, metil: { C: 1, H: 3 }, etil: { C: 2, H: 5 }, propil: { C: 3, H: 7 },
   isopropil: { C: 3, H: 7 }, butil: { C: 4, H: 9 }, isobutil: { C: 4, H: 9 }, 'sec-butil': { C: 4, H: 9 }, 'terc-butil': { C: 4, H: 9 },
 });
 

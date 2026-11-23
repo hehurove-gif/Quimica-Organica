@@ -51,7 +51,7 @@ test('analyze aromático: ambiguo → incompleto con las opciones; contradicció
 });
 
 test('analyze aromático: grupos repetidos válidos pero sin nombre se dicen, no se inventan', () => {
-  const a = ok('1,2-dihidroxibenceno');
+  const a = ok('1,2-dicarboxi-4-nitrobenceno');
   assert.equal(a.names, null);
   assert.ok(a.notes.some((n) => n.type === 'sin_nombre'));
 });
@@ -59,4 +59,21 @@ test('analyze aromático: grupos repetidos válidos pero sin nombre se dicen, no
 test('analyze: las cadenas no se ven afectadas', () => {
   assert.equal(ok('2-metilbutano').names?.sistematico, '2-metilbutano');
   assert.equal(analyze('fenilmetano').status, 'fuera_de_alcance');
+});
+
+test('analyze aromático: dioles y diácidos se nombran y los comunes se avisan', () => {
+  assert.equal(ok('catecol').names?.sistematico, '1,2-dihidroxibenceno');
+  assert.equal(ok('resorcinol').names?.sistematico, '1,3-dihidroxibenceno');
+  assert.equal(ok('hidroquinona').names?.sistematico, '1,4-dihidroxibenceno');
+  assert.equal(ok('acido tereftalico').names?.sistematico, 'ácido 1,4-bencenodicarboxílico');
+  assert.equal(ok('acido ftalico').formula, 'C₈H₆O₄');
+  assert.equal(ok('acido 1,3-bencenodicarboxilico').correcto, true);
+  assert.equal(ok('1,4-diaminobenceno').correcto, true);
+});
+
+test('analyze aromático: estireno, vinilbenceno y ácido p-toluensulfónico', () => {
+  assert.equal(ok('estireno').names?.sistematico, 'etenilbenceno');
+  assert.equal(ok('estireno').formula, 'C₈H₈');
+  assert.equal(ok('vinilbenceno').molecule?.canonicalKey(), ok('etenilbenceno').molecule?.canonicalKey());
+  assert.equal(ok('acido p-toluensulfonico').names?.sistematico, 'ácido 4-metilbencenosulfónico');
 });

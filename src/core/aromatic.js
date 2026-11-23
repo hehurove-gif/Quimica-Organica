@@ -47,6 +47,7 @@ export const SUBS = [
   { name: 'carboxi', alpha: 'carboxi', label: 'COOH', kind: 'frag', smiles: 'C(=O)O' },
   { name: 'metoxi', alpha: 'metoxi', label: 'OCH₃', kind: 'frag', smiles: 'OC' },
   { name: 'etoxi', alpha: 'etoxi', label: 'OC₂H₅', kind: 'frag', smiles: 'OCC' },
+  { name: 'etenil', alpha: 'etenil', label: 'CH=CH₂', kind: 'frag', smiles: 'C=C' },
   { name: 'metil', alpha: 'metil', label: 'CH₃', kind: 'frag', smiles: 'C' },
   { name: 'etil', alpha: 'etil', label: 'C₂H₅', kind: 'frag', smiles: 'CC' },
   { name: 'propil', alpha: 'propil', label: 'C₃H₇', kind: 'frag', smiles: 'CCC' },
@@ -85,6 +86,14 @@ export const PARENTS = [
   { word: 'cumeno', id: 'cumeno', principal: 'isopropil', common: true },
   { word: 'cresol', id: 'cresol', principal: 'hidroxi', needsOrient: true, second: 'metil', common: true },
   { word: 'mesitileno', id: 'mesitileno', principal: null, fixed: [[1, 'metil'], [3, 'metil'], [5, 'metil']], common: true },
+  { word: 'estireno', id: 'estireno', principal: 'etenil', common: true },
+  { word: 'toluensulfonico', id: 'toluensulfonico', principal: 'sulfo', acid: true, needsOrient: true, second: 'metil', common: true },
+  { word: 'catecol', id: 'catecol', principal: null, fixed: [[1, 'hidroxi'], [2, 'hidroxi']], common: true },
+  { word: 'resorcinol', id: 'resorcinol', principal: null, fixed: [[1, 'hidroxi'], [3, 'hidroxi']], common: true },
+  { word: 'hidroquinona', id: 'hidroquinona', principal: null, fixed: [[1, 'hidroxi'], [4, 'hidroxi']], common: true },
+  { word: 'isoftalico', id: 'isoftalico', principal: 'carboxi', acid: true, fixed: [[1, 'carboxi'], [3, 'carboxi']], common: true },
+  { word: 'tereftalico', id: 'tereftalico', principal: 'carboxi', acid: true, fixed: [[1, 'carboxi'], [4, 'carboxi']], common: true },
+  { word: 'ftalico', id: 'ftalico', principal: 'carboxi', acid: true, fixed: [[1, 'carboxi'], [2, 'carboxi']], common: true },
   { word: 'salicilico', id: 'salicilico', principal: 'carboxi', acid: true, fixed: [[1, 'carboxi'], [2, 'hidroxi']], common: true },
 ];
 
@@ -102,7 +111,10 @@ const ORIENT_WORD = /** @type {Record<string, 'o' | 'm' | 'p'>} */ ({ o: 'o', or
  *   | { status: 'invalido' | 'fuera_de_alcance', errors: AromError[] }}
  */
 export function parseAromatic(text) {
-  const t = normalize(text).replace(/\s+/g, ' ').trim().replace(/benzen/g, 'bencen');
+  let t = normalize(text).replace(/\s+/g, ' ').trim().replace(/benzen/g, 'bencen').replace(/vinil/g, 'etenil');
+  // ácido 1,4-bencenodicarboxílico = 1,4-dicarboxibenceno (misma estructura)
+  const dic = /^acido (\d+,\d+)-bencenodicarboxilico$/.exec(t);
+  if (dic) t = `${dic[1]}-dicarboxibenceno`;
   const parent = PARENTS.find((p) => t.endsWith(p.word));
   if (!parent) return { status: 'no_aromatico' };
   let rest = t.slice(0, t.length - parent.word.length).replace(/[\s-]+$/, '');
@@ -452,9 +464,15 @@ export function nameAromatic(mol) {
   if ('error' in rr) return { ok: false, reason: rr.error };
   const { ring, subs } = rr;
   const count = (/** @type {string} */ n) => subs.filter((x) => x.sub.name === n).length;
-  const principal = PRIORITY.find((n) => count(n) > 0) ?? null;
+  let principal = PRIORITY.find((n) => count(n) > 0) ?? null;
+  // dos o más grupos principales iguales: dioles y diaminas se nombran con prefijos sobre benceno
+  // (1,2-dihidroxibenceno); el diácido carboxílico solo si no hay más sustituyentes
+  let forceBenzene = false;
+  let diacid = false;
   if (principal && count(principal) > 1) {
-    return { ok: false, reason: `tiene más de un grupo «${principal}» (diácidos, dioles, diaminas…), que todavía no están soportados` };
+    if (principal === 'hidroxi' || principal === 'amino') { principal = null; forceBenzene = true; }
+    else if (principal === 'carboxi' && subs.length === 2) { principal = null; forceBenzene = true; diacid = true; }
+    else return { ok: false, reason: `tiene más de un grupo «${principal}» junto con otros sustituyentes, que todavía no está soportado` };
   }
 
   /**
@@ -490,12 +508,17 @@ export function nameAromatic(mol) {
     if (principal === 'amino') alternatives.push(compose('amino', 'bencenamina', false).text);
     if (principal === 'carboxi') alternatives.push(compose('carboxi', 'bencenocarboxílico', true).text);
     if (principal === 'formil') alternatives.push(compose('formil', 'bencenocarbaldehído', false).text);
-  } else if (count('metil') === 1 && !subs.some((x) => x.sub.name !== 'metil' && ALKYL.has(x.sub.name))) {
+  } else if (!forceBenzene && count('metil') === 1 && !subs.some((x) => x.sub.name !== 'metil' && ALKYL.has(x.sub.name))) {
     main = compose('metil', 'tolueno', false);
     parentWord = 'tolueno';
     alternatives.push(compose(null, 'benceno', false).text);
   } else {
     main = compose(null, 'benceno', false);
+  }
+  if (diacid) {
+    const locs = main.placed.map((p) => p.pos).join(',');
+    main = { ...main, text: `ácido ${locs}-bencenodicarboxílico` };
+    parentWord = 'bencenodicarboxílico';
   }
   const sistematico = main.text;
 
@@ -510,10 +533,15 @@ export function nameAromatic(mol) {
   if (solo('etoxi')) commons.push('fenetol');
   if (solo('isopropil')) commons.push('cumeno');
   if (solo('amino')) commons.push('fenilamina');
+  if (subs.length === 2 && (diacid || count('hidroxi') === 2)) {
+    const d = ((subs[1].idx - subs[0].idx) % 6 + 6) % 6;
+    const k = d === 1 || d === 5 ? 0 : d === 2 || d === 4 ? 1 : 2;
+    commons.push(diacid ? ['ácido ftálico', 'ácido isoftálico', 'ácido tereftálico'][k] : ['catecol', 'resorcinol', 'hidroquinona'][k]);
+  }
   if (subs.length === 3 && subs.every((x) => x.sub.name === 'metil') && new Set(subs.map((x) => x.idx % 2)).size === 1) commons.push('mesitileno');
 
   // o-, m-, p- cuando hay exactamente dos sustituyentes
-  if (subs.length === 2) {
+  if (subs.length === 2 && !diacid) {
     const d = ((subs[1].idx - subs[0].idx) % 6 + 6) % 6;
     const o = d === 1 || d === 5 ? 'o' : d === 2 || d === 4 ? 'm' : 'p';
     if (principal || parentWord === 'tolueno') {

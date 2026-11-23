@@ -45,7 +45,7 @@ test('nombre aromático: alternativas y nombres comunes', () => {
 });
 
 test('nombre aromático: lo no soportado devuelve el motivo', () => {
-  const p = parseAromatic('1,2-dihidroxibenceno');
+  const p = parseAromatic('1,2-dicarboxi-4-nitrobenceno');
   assert.equal(p.status, 'valido');
   if (p.status !== 'valido') return;
   const b = buildAromatic(p.ast);
