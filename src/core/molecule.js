@@ -89,6 +89,73 @@ export class Molecule {
     return this.atoms[id].el;
   }
 
+  /** Copia independiente (mismos ids). */
+  clone() {
+    const m = new Molecule();
+    m.atoms = this.atoms.map((a) => ({ ...a }));
+    m.bonds = this.bonds.map((b) => ({ ...b }));
+    return m;
+  }
+
+  /**
+   * Fija el orden del enlace a–b: 0 lo quita, y si no existía lo crea.
+   * @param {number} a
+   * @param {number} b
+   * @param {0 | 1 | 2 | 3} order
+   */
+  setBond(a, b, order) {
+    const i = this.bonds.findIndex((x) => (x.a === a && x.b === b) || (x.a === b && x.b === a));
+    if (order === 0) {
+      if (i >= 0) this.bonds.splice(i, 1);
+    } else if (i >= 0) {
+      this.bonds[i].order = order;
+    } else {
+      this.bonds.push({ a, b, order });
+    }
+  }
+
+  /**
+   * Copia de la molécula sin los átomos indicados (y sus enlaces); los ids se renumeran.
+   * @param {number[]} ids
+   * @returns {{ mol: Molecule, map: Map<number, number> }} map: id viejo -> id nuevo
+   */
+  without(ids) {
+    const drop = new Set(ids);
+    const m = new Molecule();
+    /** @type {Map<number, number>} */
+    const map = new Map();
+    for (const a of this.atoms) if (!drop.has(a.id)) map.set(a.id, m.addAtom(a.el, a.q || 0));
+    for (const b of this.bonds) {
+      const x = map.get(b.a);
+      const y = map.get(b.b);
+      if (x !== undefined && y !== undefined) m.addBond(x, y, b.order);
+    }
+    return { mol: m, map };
+  }
+
+  /**
+   * Copia de cada componente conexa como molécula independiente.
+   * @returns {{ mol: Molecule, map: Map<number, number> }[]} map: id viejo -> id nuevo
+   */
+  split() {
+    return this.components().map((comp) => {
+      const keep = new Set(comp);
+      return this.without(this.atoms.map((a) => a.id).filter((id) => !keep.has(id)));
+    });
+  }
+
+  /**
+   * Añade una copia de otra molécula (sin enlazarla). @param {Molecule} other
+   * @returns {Map<number, number>} id de `other` -> id nuevo en esta molécula
+   */
+  merge(other) {
+    /** @type {Map<number, number>} */
+    const map = new Map();
+    for (const a of other.atoms) map.set(a.id, this.addAtom(a.el, a.q || 0));
+    for (const b of other.bonds) this.addBond(/** @type {number} */ (map.get(b.a)), /** @type {number} */ (map.get(b.b)), b.order);
+    return map;
+  }
+
   /** Fórmula molecular en orden de Hill (C, H, luego alfabético). */
   formula() {
     /** @type {Record<string, number>} */
