@@ -576,6 +576,9 @@ function whyNot(mol) {
       if (ox.oxo.length === 0 && (ox.ether.length > 1 || (ox.ether.length === 1 && single > 1) || ox.nitrogens.length > 1 || (ox.nitrogens.length === 1 && ox.oh.length > 0))) {
         return 'Acetales, hemiacetales y otros carbonos con varios heteroátomos todavía no se pueden nombrar.';
       }
+      if (ox.oxo.length && nbs.some((nb) => nb.order > 1 && mol.element(nb.id) === 'C')) {
+        return 'Los cetenos (C=C=O) todavía no se pueden nombrar: no son aldehídos ni cetonas.';
+      }
       if (ox.oxo.length && nbs.some((nb) => HALOGENS.includes(mol.element(nb.id)))) {
         return 'Los halogenuros de acilo todavía no se pueden nombrar.';
       }

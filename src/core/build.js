@@ -399,6 +399,23 @@ function applySuffix(mol, chain, spec, suffix, pos, nAtoms) {
 }
 
 /**
+ * Un aldehído necesita su H: si un enlace múltiple de la cadena usa la valencia del carbono
+ * terminal, queda un cetena (C=C=O), no un aldehído («1-propenal» no existe).
+ * @param {Spec} spec @param {Molecule} mol @param {number[]} chain
+ * @returns {BuildError | null}
+ */
+function aldehydeWithoutH(spec, mol, chain) {
+  if (!spec.suffix || spec.suffix.kind !== 'al') return null;
+  const ends = spec.suffix.mult === 2 && chain.length > 1 ? [0, chain.length - 1] : [0];
+  for (const e of ends) {
+    if (mol.implicitH(chain[e]) < 1) {
+      return { code: 'valencia', message: `El carbono ${e + 1} es el del aldehído (–CHO) y necesita su hidrógeno: no puede llevar además un enlace múltiple con el carbono vecino.` };
+    }
+  }
+  return null;
+}
+
+/**
  * Mensajes de valencia en lenguaje de bachillerato.
  * @param {Molecule} mol
  * @param {number[]} chain
@@ -543,7 +560,7 @@ function buildStructure(spec) {
     const pos = [...fixed];
     unknown.forEach((gi, j) => (pos[gi] = combo[j]));
     const a = assemble(spec, items, pos);
-    if (!a || a.mol.validate().length) continue;
+    if (!a || a.mol.validate().length || aldehydeWithoutH(spec, a.mol, a.chain)) continue;
     const key = a.mol.canonicalKey();
     if (key !== null && !byKey.has(key)) {
       byKey.set(key, pos);
@@ -587,6 +604,8 @@ function buildStructure(spec) {
       return fail([{ code: 'enlace_repetido', message: 'Dos enlaces múltiples no pueden estar en el mismo enlace entre carbonos: revisa los localizadores.' }]);
     }
     const issues = valenceErrors(a.mol, a.chain);
+    const ald = aldehydeWithoutH(spec, a.mol, a.chain);
+    if (ald) issues.push(ald);
     if (issues.length) return fail(issues);
     return { status: 'valido', molecule: a.mol, chain: a.chain, trace: a.trace, errors: [], notes };
   }

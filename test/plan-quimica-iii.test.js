@@ -14,7 +14,7 @@ const CASOS = {
  'Alcanos (práctica 1: metano, halogenación, oxidación parcial, combustión)': ['metano','clorometano','diclorometano','triclorometano','tetraclorometano','bromometano','metanol','metanal','ácido metanoico','etano','cloroetano','bromoetano','propano','2-cloropropano','butano','2-metilpropano','pentano','2,2-dimetilpropano','hexano','heptano','octano','nonano','decano'],
  'Alquenos (eteno por deshidratación de etanol, halogenación, oxidación parcial)': ['eteno','propeno','1-buteno','2-buteno','2-metilpropeno','1,2-dibromoetano','1,2-dicloroetano','etanol','etilenglicol','1,2-etanodiol','1-penteno','2-penteno','1,3-butadieno','1-cloroetano','cloroeteno','bromoeteno','tetrafluoroeteno','2-bromopropano'],
  'Alquinos (etino/acetileno, halogenación, oxidación parcial)': ['etino','acetileno','propino','1-butino','2-butino','1,2-dibromoeteno','1,1,2,2-tetrabromoetano','1,1,2,2-tetracloroetano','etanal','ácido etanoico','ácido etanodioico','etanodial'],
- 'Oxigenados (oxidación de alcohol, esterificación, hidrólisis)': ['metanol','etanol','1-propanol','2-propanol','1-butanol','2-butanol','2-metil-2-propanol','1,2,3-propanotriol','etanal','propanal','butanal','propanona','butanona','ácido etanoico','ácido propanoico','ácido butanoico','ácido metanoico','etanoato de etilo','etanoato de metilo','propanoato de metilo','metanoato de etilo','butanoato de etilo','etoxietano','metoxietano','ácido hexadecanoico','ácido octadecanoico','ácido 9-octadecenoico','etanoato de pentilo','etanoato de octilo'],
+ 'Oxigenados (oxidación de alcohol, esterificación, hidrólisis)': ['metanol','etanol','1-propanol','2-propanol','1-butanol','2-butanol','2-metil-2-propanol','1,2,3-propanotriol','etanal','propanal','butanal','propanona','butanona','ácido etanoico','ácido propanoico','ácido butanoico','ácido metanoico','etanoato de etilo','etanoato de metilo','propanoato de metilo','metanoato de etilo','butanoato de etilo','etoxietano','metoxietano','ácido hexadecanoico','ácido octadecanoico','ácido 9-octadecenoico','etanoato de pentilo','etanoato de octilo','ácido láurico','ácido palmítico','ácido esteárico','ácido láctico','ácido acrílico','ácido metacrílico','acroleína','isooctano','isopreno','cloruro de vinilo','metacrilato de metilo','acrilato de metilo','ácido oxálico','ácido succínico'],
  'Descarboxilación/otras obtenciones': ['ácido etanoico','metano','ácido propanoico','etano'],
  'Benceno y derivados (RAP 2)': ['benceno','bromobenceno','clorobenceno','nitrobenceno','metilbenceno','tolueno','etilbenceno','fenol','anilina','ácido benzoico','benzaldehído','ácido bencenosulfónico','1,2-dibromobenceno','1,4-diclorobenceno','1,3-dinitrobenceno','o-xileno','1,3,5-trimetilbenceno','2,4,6-trinitrotolueno','p-nitrotolueno','ácido 2-hidroxibenzoico','estireno','vinilbenceno','catecol','resorcinol','hidroquinona','ácido ftálico','ácido tereftálico','ácido p-toluensulfónico','1,4-diaminobenceno'],
  'Glicerol (producto de la saponificación)': ['1,2,3-propanotriol','propano-1,2,3-triol'],
@@ -35,7 +35,7 @@ for (const [tema, nombres] of Object.entries(CASOS)) {
 /** Casos del plan que el proyecto todavía no cubre: nunca se inventa una estructura. */
 const BRECHAS = [
   'estearato de sodio', 'octadecanoato de sodio', // sales (jabones): requieren modelo iónico
-  'polietileno', 'poli(eteno)', 'policloruro de vinilo', 'cloruro de vinilo', // polímeros y radical vinilo
+  'polietileno', 'poli(eteno)', 'policloruro de vinilo', // polímeros y radical vinilo
   'dióxido de carbono', // inorgánico (producto de la combustión): fuera del proyecto
   'propanotriol', // sin localizadores hay más de una estructura
 ];
@@ -44,5 +44,24 @@ test('plan Química III — brechas documentadas: se dicen, no se inventan', () 
     const a = analyze(n);
     assert.notEqual(a.status, 'valido', n);
     assert.equal(a.molecule, null, n);
+  }
+});
+
+test('aldehído insaturado: el CHO conserva su H («1-propenal» no existe; «propenal» es 2-propenal)', () => {
+  const malo = analyze('1-propenal');
+  assert.equal(malo.status, 'invalido');
+  assert.ok(malo.errors.some((e) => /necesita su hidrógeno/.test(e.message)));
+  assert.equal(analyze('propenal').names?.sistematico, '2-propenal');
+  assert.equal(analyze('acroleína').formula, 'C₃H₄O');
+  assert.equal(analyze('2-butenal').status, 'valido');
+  assert.equal(analyze('butenal').status, 'incompleto');
+});
+
+test('nombres comunes de cadena: leen la misma estructura que su nombre sistemático', () => {
+  const par = [['ácido palmítico', 'ácido hexadecanoico'], ['ácido láctico', 'ácido 2-hidroxipropanoico'], ['isooctano', '2,2,4-trimetilpentano'],
+    ['cloruro de vinilo', 'cloroeteno'], ['metacrilato de metilo', '2-metilpropenoato de metilo'], ['isopreno', '2-metil-1,3-butadieno']];
+  for (const [c, s] of par) {
+    assert.equal(analyze(c).molecule?.canonicalKey(), analyze(s).molecule?.canonicalKey(), c);
+    assert.ok(analyze(c).notes.some((n) => n.type === 'comun'), c);
   }
 });
