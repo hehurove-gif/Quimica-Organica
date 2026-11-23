@@ -15,6 +15,7 @@ import { explain } from './explain.js';
 import { commonNamesOf } from './lexicon.js';
 import { analyzeAromatic } from './aromatic-analysis.js';
 import { analyzeSalt } from './salts.js';
+import { analyzePolymer } from './polymers.js';
 
 /**
  * @typedef {import('./parser.js').Ast} Ast
@@ -53,6 +54,8 @@ export function analyze(text) {
     status: 'vacio', errors: [], notes: [], ast: null, molecule: null, chain: [], trace: [],
     names: null, correcto: false, formula: null, semidesarrollada: null, steps: [],
   };
+  const pol = analyzePolymer(text, base, analyze);
+  if (pol) return pol;
   const sal = analyzeSalt(text, base, analyze);
   if (sal) return sal;
   const ar = analyzeAromatic(text, base);
