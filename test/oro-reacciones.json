@@ -1,0 +1,73 @@
+[
+  {"t":"esterificacion","r":["ácido etanoico","etanol"],"p":["etanoato de etilo","agua"]},
+  {"t":"esterificacion","r":["ácido propanoico","1-butanol"],"p":["propanoato de butilo","agua"]},
+  {"t":"esterificacion","r":["ácido butanoico","1-butanol"],"p":["butanoato de butilo","agua"]},
+  {"t":"esterificacion","r":["ácido metanoico","metanol"],"p":["metanoato de metilo","agua"]},
+  {"t":"esterificacion","r":["ácido pentanoico","1-propanol"],"p":["pentanoato de propilo","agua"]},
+
+  {"t":"oxidacion","r":["2-butanol"],"o":{"oxidante":"KMnO4"},"p":["2-butanona","agua"]},
+  {"t":"oxidacion","r":["2-metil-3-pentanol"],"o":{"oxidante":"KMnO4"},"p":["2-metil-3-pentanona","agua"],"nota":"El compendio dice 3-metil-2-pentanol/-ona pero dibuja 2-metil-3-pentanol/-ona; se conserva la estructura dibujada."},
+  {"t":"oxidacion","r":["2-propanol"],"o":{"oxidante":"K2Cr2O7"},"p":["propanona","agua"]},
+  {"t":"oxidacion","r":["etanol"],"o":{"oxidante":"KMnO4"},"p":["ácido etanoico","agua"],"c":[1,2,1,1]},
+  {"t":"oxidacion","r":["1-propanol"],"o":{"oxidante":"PCC"},"p":["propanal","agua"]},
+
+  {"t":"reduccion","r":["3-metil-2-pentanona"],"o":{"reductor":"LiAlH4"},"p":["3-metil-2-pentanol"]},
+  {"t":"reduccion","r":["propanona"],"o":{"reductor":"NaBH4"},"p":["2-propanol"]},
+  {"t":"reduccion","r":["2-butanona"],"o":{"reductor":"LiAlH4"},"p":["2-butanol"]},
+  {"t":"reduccion","r":["butanal"],"o":{"reductor":"NaBH4"},"p":["1-butanol"]},
+  {"t":"reduccion","r":["3-pentanona"],"o":{"reductor":"LiAlH4"},"p":["3-pentanol"]},
+
+  {"t":"markovnikov","r":["2-metilpropeno"],"o":{"reactivo":"HBr"},"p":["2-bromo-2-metilpropano"]},
+  {"t":"markovnikov","r":["1-penteno"],"o":{"reactivo":"HCl"},"p":["2-cloropentano"]},
+  {"t":"markovnikov","r":["1-buteno"],"o":{"reactivo":"HCl"},"p":["2-clorobutano"]},
+  {"t":"markovnikov","r":["propeno"],"o":{"reactivo":"H2O"},"p":["2-propanol"]},
+  {"t":"markovnikov","r":["2-metil-2-buteno"],"o":{"reactivo":"HI"},"p":["2-yodo-2-metilbutano"]},
+
+  {"t":"deshidratacion","r":["2-butanol"],"p":["2-buteno","agua"]},
+  {"t":"deshidratacion","r":["2-pentanol"],"p":["2-penteno","agua"]},
+  {"t":"deshidratacion","r":["3-metil-2-butanol"],"p":["2-metil-2-buteno","agua"]},
+  {"t":"deshidratacion","r":["3-pentanol"],"p":["2-penteno","agua"]},
+  {"t":"deshidratacion","r":["2-metil-2-butanol"],"p":["2-metil-2-buteno","agua"]},
+
+  {"t":"descarboxilacion","r":["etanoato de sodio"],"p":["metano","carbonato de sodio"]},
+  {"t":"descarboxilacion","r":["propanoato de sodio"],"p":["etano","carbonato de sodio"]},
+  {"t":"descarboxilacion","r":["butanoato de sodio"],"p":["propano","carbonato de sodio"]},
+  {"t":"descarboxilacion","r":["pentanoato de sodio"],"p":["butano","carbonato de sodio"]},
+  {"t":"descarboxilacion","r":["2-metilpropanoato de sodio"],"p":["propano","carbonato de sodio"]},
+
+  {"t":"saponificacion","r":["propanoato de etilo"],"o":{"base":"KOH"},"p":["propanoato de potasio","etanol"]},
+  {"t":"saponificacion","r":["etanoato de metilo"],"o":{"base":"NaOH"},"p":["etanoato de sodio","metanol"]},
+  {"t":"saponificacion","r":["butanoato de propilo"],"o":{"base":"NaOH"},"p":["butanoato de sodio","1-propanol"]},
+  {"t":"saponificacion","r":["metanoato de etilo"],"o":{"base":"KOH"},"p":["metanoato de potasio","etanol"]},
+  {"t":"saponificacion","r":["benzoato de metilo"],"o":{"base":"NaOH"},"p":["benzoato de sodio","metanol"],"fuera":"El núcleo no lee ésteres aromáticos (benzoato de metilo)."},
+
+  {"t":"hidrolisis","r":["etanoato de metilo"],"p":["ácido etanoico","metanol"]},
+  {"t":"hidrolisis","r":["propanoato de etilo"],"p":["ácido propanoico","etanol"]},
+  {"t":"hidrolisis","r":["butanoato de butilo"],"p":["ácido butanoico","1-butanol"]},
+  {"t":"hidrolisis","r":["metanoato de propilo"],"p":["ácido metanoico","1-propanol"]},
+  {"t":"hidrolisis","r":["etanoato de isopropilo"],"p":["ácido etanoico","2-propanol"]},
+
+  {"t":"halogenacion","r":["metano"],"o":{"halogeno":"Cl2"},"p":["clorometano","cloruro de hidrógeno"]},
+  {"t":"halogenacion","r":["etano"],"o":{"halogeno":"Br2"},"p":["bromoetano","bromuro de hidrógeno"]},
+  {"t":"halogenacion","r":["propano"],"o":{"halogeno":"Br2"},"p":["2-bromopropano","bromuro de hidrógeno"]},
+  {"t":"halogenacion","r":["2-metilpropano"],"o":{"halogeno":"Br2"},"p":["2-bromo-2-metilpropano","bromuro de hidrógeno"]},
+  {"t":"halogenacion","r":["ciclopentano"],"o":{"halogeno":"Cl2"},"p":["clorociclopentano","cloruro de hidrógeno"],"fuera":"Los cicloalcanos están fuera de alcance del núcleo."},
+
+  {"t":"combustion","r":["metano"],"p":["dióxido de carbono","agua"],"c":[1,2,1,2]},
+  {"t":"combustion","r":["propano"],"p":["dióxido de carbono","agua"],"c":[1,5,3,4]},
+  {"t":"combustion","r":["etano"],"p":["dióxido de carbono","agua"],"c":[2,7,4,6]},
+  {"t":"combustion","r":["butano"],"p":["dióxido de carbono","agua"],"c":[2,13,8,10]},
+  {"t":"combustion","r":["etanol"],"p":["dióxido de carbono","agua"],"c":[1,3,2,3]},
+
+  {"t":"polimerizacion","r":["eteno"],"p":["polietileno"]},
+  {"t":"polimerizacion","r":["propeno"],"p":["polipropileno"]},
+  {"t":"polimerizacion","r":["cloroeteno"],"p":["policloruro de vinilo"]},
+  {"t":"polimerizacion","r":["tetrafluoroeteno"],"p":["politetrafluoroetileno"]},
+  {"t":"polimerizacion","r":["estireno"],"p":["poliestireno"]},
+
+  {"t":"hidrogenacion","r":["eteno"],"o":{"catalizador":"Pt"},"p":["etano"],"c":[1,1,1]},
+  {"t":"hidrogenacion","r":["2-buteno"],"o":{"catalizador":"Ni"},"p":["butano"],"c":[1,1,1]},
+  {"t":"hidrogenacion","r":["2-metilpropeno"],"o":{"catalizador":"Pd"},"p":["2-metilpropano"],"c":[1,1,1]},
+  {"t":"hidrogenacion","r":["propino"],"o":{"catalizador":"Pt"},"p":["propano"],"c":[1,2,1]},
+  {"t":"hidrogenacion","r":["ciclohexeno"],"o":{"catalizador":"Pd"},"p":["ciclohexano"],"fuera":"Los cicloalcanos y cicloalquenos están fuera de alcance del núcleo."}
+]
