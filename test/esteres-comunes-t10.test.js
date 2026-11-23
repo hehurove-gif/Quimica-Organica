@@ -28,8 +28,10 @@ for (const [nombre, smiles, sist, formula] of CASOS) {
   });
 }
 
-test('sales orgánicas: se declaran fuera de alcance, sin estructura inventada', () => {
-  for (const n of ['acetato de sodio', 'propanoato de potasio', 'etanoato de calcio']) {
+test('sales orgánicas: Na/K/Li se leen (salts.js); otros metales se declaran fuera de alcance, sin estructura inventada', () => {
+  assert.equal(analyze('acetato de sodio').status, 'valido');
+  assert.equal(analyze('propanoato de potasio').status, 'valido');
+  for (const n of ['etanoato de calcio', 'acetato de magnesio']) {
     const r = analyze(n);
     assert.equal(r.status, 'fuera_de_alcance', n);
     assert.equal(r.molecule, null, n);

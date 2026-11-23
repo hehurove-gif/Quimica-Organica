@@ -14,6 +14,7 @@ import { semidesarrollada } from './render.js';
 import { explain } from './explain.js';
 import { commonNamesOf } from './lexicon.js';
 import { analyzeAromatic } from './aromatic-analysis.js';
+import { analyzeSalt } from './salts.js';
 
 /**
  * @typedef {import('./parser.js').Ast} Ast
@@ -52,6 +53,8 @@ export function analyze(text) {
     status: 'vacio', errors: [], notes: [], ast: null, molecule: null, chain: [], trace: [],
     names: null, correcto: false, formula: null, semidesarrollada: null, steps: [],
   };
+  const sal = analyzeSalt(text, base, analyze);
+  if (sal) return sal;
   const ar = analyzeAromatic(text, base);
   if (ar) return ar;
   const p = parse(text);
