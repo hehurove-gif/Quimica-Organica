@@ -49,19 +49,33 @@ Reglas (todas deterministas, ver `src/core/aromatic.js`):
 Verificación: ida y vuelta exhaustiva (todas las combinaciones de hasta 3 de 8 sustituyentes en las
 posiciones posibles: nombre → estructura → mismo nombre) y los 20 casos del plan con fórmula y clave canónica.
 
+### Ampliación «ligeramente superior al plan» (v0.4)
+
+| Tema | Ejemplos que ahora se leen | Notas |
+|---|---|---|
+| Dioles, diaminas y diácidos aromáticos | `catecol`, `resorcinol`, `hidroquinona`, `1,4-diaminobenceno`, `ácido ftálico/isoftálico/tereftálico`, `ácido 1,4-bencenodicarboxílico` | nombre escolar con prefijos (`1,2-dihidroxibenceno`); el diácido solo si no hay más sustituyentes |
+| Vinilo / estireno | `estireno`, `vinilbenceno`, `etenilbenceno`, `4-nitroestireno` | sustituyente `etenil` en el anillo |
+| Sulfónicos | `ácido p-toluensulfónico` | |
+| Comunes de cadena | ácidos láurico, mirístico, palmítico, esteárico, oxálico, malónico, succínico, láctico, acrílico, metacrílico; `acroleína`, `isooctano`, `isopreno`, `cloruro de vinilo`, `acrilato/metacrilato de metilo` | se leen por su nombre sistemático y se avisan como comunes |
+| Sales de ácidos carboxílicos (jabones) | `estearato de sodio`, `octadecanoato de sodio`, `acetato de potasio`, `benzoato de sodio`, `lactato de sodio` | anión carboxilato dibujado (O⁻) y catión Na⁺/K⁺/Li⁺ en nombre, fórmula y notas; solo monocarboxilatos |
+| Polímeros de adición | `polietileno`, `polipropileno`, `policloruro de vinilo`, `poliestireno`, `teflón`, `polimetacrilato de metilo`, `poli(monómero)` | catálogo cerrado de unidades repetitivas; se dibuja el monómero; sin n ni estereoquímica |
+
+**Error encontrado y corregido durante la auditoría:** `1-propenal` se aceptaba como válido, pero
+el carbono del aldehído se quedaba sin H (era en realidad un ceteno). Ahora se rechaza («necesita
+su hidrógeno»), `propenal` se resuelve como `2-propenal`, y el nombrador declara fuera de alcance los cetenos.
+
 ## Brechas documentadas (no inventan estructura)
 
-| Caso del plan | Estado | Motivo |
+| Caso | Estado | Motivo |
 |---|---|---|
-| `estearato de sodio`, `octadecanoato de sodio` (jabones) | fuera de alcance | sales: necesitan modelo iónico (carga y contraión) |
-| `polietileno`, `poli(eteno)`, `policloruro de vinilo` | fuera de alcance / no válido | polímeros (unidad repetitiva) |
-| `cloruro de vinilo`, `estireno` | fuera de alcance / no válido | radical vinilo y fenileteno: sustituyentes con enlace múltiple |
 | `propanotriol` | incompleto | faltan localizadores (`1,2,3-propanotriol`); es el comportamiento correcto |
 | `dióxido de carbono` | no válido | inorgánico (producto de la combustión) |
-| Fenil como sustituyente de una cadena, dioles/diácidos/diaminas aromáticos (`1,2-bencenodiol`) | fuera de alcance | se lee la estructura (`1,2-dihidroxibenceno`) pero no se genera nombre |
-
-Si se quisiera cubrir estas brechas, el orden de menor a mayor esfuerzo sería: dioles aromáticos →
-sustituyente vinilo (`cloruro de vinilo`, `estireno`) → sales sódicas → unidad repetitiva de polímeros.
+| `polibutadieno`, `poliisopreno`, polímeros fuera del catálogo | fuera de alcance | unidad 1,4 de dienos no catalogada |
+| Sales de otros metales (`etanoato de calcio`) y de diácidos (`etanodioato de sodio`) | fuera de alcance | requieren varios cationes/cargas |
+| Fenil como sustituyente de una cadena, naftaleno, bifenilo, PCB, DDT, benzopireno | fuera de alcance | anillos fusionados o fenil en cadena: no soportado |
+| Triglicéridos, ácido oleico con estereoquímica, ácido cítrico, urea, carburo de calcio | fuera de alcance | no cubiertos |
+| Cicloalcanos (ciclohexano…) | fuera de alcance | el analizador de cadenas no admite ciclos (sí el benceno) |
+| Diol/diamina aromático con IUPAC 2013 (`benceno-1,2-diol`) | se lee la estructura, nombre escolar | el nombre iupac2013 repite el escolar |
 
 ## Decisiones y preguntas para el docente
 

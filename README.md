@@ -26,7 +26,7 @@ La pestaña **Construir y verificar** arma una estructura sin escribir el nombre
 
 ## Benceno y derivados
 
-Se leen, dibujan y nombran los derivados del benceno que pide el plan de Química III (`tolueno`, `fenol`, `anilina`, `ácido benzoico`, `2,4,6-trinitrotolueno`, `p-nitrotolueno`, `1,3,5-trimetilbenceno`…), con numeración IUPAC y equivalencias o-/m-/p-. El constructor tiene un modo **Anillo de benceno** (seis posiciones). Cobertura detallada y brechas: [`docs/cobertura-plan-quimica-iii.md`](docs/cobertura-plan-quimica-iii.md).
+Se leen, dibujan y nombran los derivados del benceno que pide el plan de Química III (`tolueno`, `fenol`, `anilina`, `ácido benzoico`, `2,4,6-trinitrotolueno`, `p-nitrotolueno`, `1,3,5-trimetilbenceno`…), con numeración IUPAC y equivalencias o-/m-/p-. El constructor tiene un modo **Anillo de benceno** (seis posiciones). También se leen estireno, dioles/diácidos aromáticos, sales de ácidos grasos (jabones) y polímeros de adición con catálogo cerrado. Cobertura detallada y brechas: [`docs/cobertura-plan-quimica-iii.md`](docs/cobertura-plan-quimica-iii.md).
 
 Alcance actual: alcanos, alquenos, alquinos, halogenuros, alcoholes, éteres, aldehídos, cetonas, ácidos, ésteres, aminas, amidas y derivados del benceno. Ver `docs/`.
 

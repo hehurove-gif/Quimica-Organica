@@ -6,7 +6,7 @@ Fecha: 2026-11-21 (v0.2: 2026-11-18) · Comandos: `npm test`, `npm run typecheck
 
 | Comprobación | Resultado |
 |---|---|
-| `npm test` | 404 pruebas: **404 pasan, 0 fallan, 0 `todo`** (incluye aromáticos, propiedad con semilla fija y cobertura del plan de Química III) |
+| `npm test` | 414 pruebas: **414 pasan, 0 fallan, 0 `todo`** (incluye aromáticos, propiedad con semilla fija y cobertura del plan de Química III) |
 | `npm run typecheck` | limpio |
 | `tools/check_golden.py` (fórmulas calculadas aparte, en Python) | 118 compuestos / 223 nombres + 46 aromáticos / 74 nombres, **0 discrepancias** |
 | UI en Chrome headless | alqueno+alcohol, ácido, incompleto y fuera de alcance se muestran como se espera (captura revisada a mano) |
