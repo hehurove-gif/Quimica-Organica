@@ -53,6 +53,7 @@ dd { margin: 0; font-weight: 600; }
 .pasos li { padding: 4px 8px; border-radius: 8px; }
 .pasos li:hover, .pasos li.hl { background: var(--accent-soft); }
 .pasos li b { display: block; }
+footer a { color: inherit; font-weight: 600; }
 footer { color: var(--muted); font-size: .85rem; padding-bottom: 28px; }
 /* resaltado cruzado en el SVG */
 svg .atom .hit { fill: transparent; }
