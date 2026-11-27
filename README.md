@@ -35,3 +35,7 @@ Alcance actual: alcanos, alquenos, alquinos, halogenuros, alcoholes, éteres, al
 - [`docs/convenciones-nomenclatura.md`](docs/convenciones-nomenclatura.md): qué formas se aceptan y cómo se escribe la forma canónica.
 - [`docs/cobertura-plan-quimica-iii.md`](docs/cobertura-plan-quimica-iii.md): qué pide el plan escolar y qué cubre el sistema (incluye brechas).
 - [`docs/arquitectura.md`](docs/arquitectura.md): módulos, estados, pruebas y limitaciones.
+
+## Reacciones
+
+Pestaña «Reacciones»: 12 tipos del compendio (esterificación, oxidación, reducción, Markovnikov, Zaitsev, descarboxilación, saponificación, hidrólisis, halogenación, combustión, polimerización, hidrogenación) con ecuación balanceada, estructuras, paso a paso y modo práctica. Ver `docs/reacciones.md`.
