@@ -73,3 +73,43 @@ test('Markovnikov: empate de H da mezcla; Zaitsev: el minoritario se rotula; Cl�
   assert.equal(react('markovnikov', ['propino'], {}).status, 'fuera_de_alcance');
   assert.equal(react('halogenacion', ['etanol'], {}).status, 'fuera_de_alcance');
 });
+
+test('grupo C/D: casos negativos y fuera de alcance se declaran', () => {
+  assert.equal(react('esterificacion', ['ácido etanoico', 'ácido propanoico']).status, 'sin_reaccion');
+  assert.equal(react('esterificacion', ['etanol'], {}).status, 'incompleto');
+  assert.equal(react('hidrolisis', ['etanol']).status, 'sin_reaccion');
+  assert.equal(react('saponificacion', ['etanoato de metilo'], { base: 'agua' }).status, 'incompleto');
+  assert.equal(react('descarboxilacion', ['metanoato de sodio']).status, 'fuera_de_alcance');
+  assert.equal(react('descarboxilacion', ['etanol']).status, 'fuera_de_alcance'); // no es una sal
+  assert.equal(react('descarboxilacion', ['benzoato de sodio']).status, 'fuera_de_alcance'); // anillo
+  assert.equal(react('combustion', ['bromoetano']).status, 'fuera_de_alcance');
+  assert.equal(react('polimerizacion', ['1,3-butadieno']).status, 'fuera_de_alcance');
+  assert.equal(react('polimerizacion', ['butano']).status, 'fuera_de_alcance');
+});
+
+test('saponificación con LiOH y esterificación en cualquier orden de reactivos', () => {
+  const s = react('saponificacion', ['etanoato de metilo'], { base: 'LiOH' });
+  assert.equal(s.products[0].name, 'etanoato de litio');
+  const a = react('esterificacion', ['ácido etanoico', 'etanol']);
+  const b = react('esterificacion', ['etanol', 'ácido etanoico']);
+  assert.equal(a.products[0].key, b.products[0].key);
+  assert.equal(a.reversible, true);
+  assert.match(a.equation ?? '', /⇌/);
+});
+
+test('invariante: el nombre de cada producto orgánico vuelve a la misma estructura (ida y vuelta)', () => {
+  for (const e of ORO) {
+    if (e.fuera || !REACTIONS[e.t]) continue;
+    const res = react(e.t, e.r, e.o ?? {});
+    for (const p of res.products.filter((x) => x.kind === 'organic' || x.kind === 'salt')) {
+      const back = speciesFromName(/** @type {string} */ (p.name));
+      assert.ok(back.ok, `no se relee «${p.name}»`);
+      assert.equal(back.ok && back.species.key, p.key, `ida y vuelta de «${p.name}» (${e.t})`);
+    }
+  }
+});
+
+test('ecuación: la combustión del etanol se escribe con coeficientes y nombres', () => {
+  const r = react('combustion', ['etanol']);
+  assert.equal(r.equation, 'etanol + 3 oxígeno —[calor]→ 2 dióxido de carbono + 3 agua');
+});

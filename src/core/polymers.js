@@ -104,3 +104,35 @@ export function analyzePolymer(text, base, analyzeFn) {
     steps: mon.steps,
   };
 }
+
+/**
+ * Unidad repetitiva del monómero (catálogo cerrado).
+ * @param {import('./molecule.js').Molecule} mol
+ * @param {(t: string) => Analysis} analyzeFn
+ * @returns {string | null}
+ */
+export function unitOfMonomer(mol, analyzeFn) {
+  const key = mol.canonicalKey();
+  return key ? units(analyzeFn).get(key) ?? null : null;
+}
+
+/** @type {Map<string, string> | null} */
+let nameByKey = null;
+
+/**
+ * Nombre común del polímero del monómero (polietileno, PVC…) o null si no está catalogado.
+ * @param {import('./molecule.js').Molecule} mol
+ * @param {(t: string) => Analysis} analyzeFn
+ * @returns {string | null}
+ */
+export function polymerNameOf(mol, analyzeFn) {
+  if (!nameByKey) {
+    nameByKey = new Map();
+    for (const [poly, mon] of Object.entries(COMMON)) {
+      const key = analyzeFn(mon).molecule?.canonicalKey();
+      if (key && !nameByKey.has(key)) nameByKey.set(key, poly);
+    }
+  }
+  const key = mol.canonicalKey();
+  return key ? nameByKey.get(key) ?? null : null;
+}

@@ -8,6 +8,9 @@
 import { balance, conserves } from './balance.js';
 import { speciesFromName, fromMolecule, inorganic, CATION_OF } from './species.js';
 import { Molecule } from './molecule.js';
+import { nameMolecule } from './namer.js';
+import { analyze } from './analyze.js';
+import { unitOfMonomer, polymerNameOf } from './polymers.js';
 
 /** @typedef {import('./species.js').Species} Species */
 /**
@@ -344,6 +347,166 @@ function halogenacion([s], opts) {
   return { products: [out[0], inorganic('H' + x)], alternatives: out.slice(1), reagents: [inorganic(hal.value)], conditions: 'luz UV (hν)', steps, notes };
 }
 
+
+// ───────────────────────── grupo C: unir y separar fragmentos ─────────────────────────
+
+const CATION_NAME = /** @type {Record<string, string>} */ ({ Na: 'sodio', K: 'potasio', Li: 'litio' });
+
+/**
+ * Carboxilato de un ácido (O⁻ en el –OH) con su catión.
+ * @param {Molecule} acid @param {string} cation símbolo: Na, K, Li
+ * @returns {Species | null} null si el ácido no tiene exactamente un –COOH
+ */
+function carboxylate(acid, cation) {
+  const sites = acidSites(acid);
+  if (sites.length !== 1) return null;
+  const m = acid.clone();
+  m.atoms[sites[0].o].q = -1;
+  const r = nameMolecule(acid);
+  const name = r.ok && r.systematic ? `${r.systematic.replace(/^ácido /, '').replace(/ico$/, 'ato')} de ${CATION_NAME[cation]}` : null;
+  return fromMolecule(m, { cation, name });
+}
+
+/**
+ * Rompe el enlace C(=O)–O–R de un éster: devuelve el ácido (con su –OH nuevo) y el alcohol.
+ * @param {Molecule} mol @returns {{ error: Outcome } | { acid: Molecule, alcohol: Molecule }}
+ */
+function splitEster(mol) {
+  const sites = esterSites(mol);
+  if (!sites.length) return { error: fail('sin_reaccion', 'sin_ester', 'No hay un grupo éster R–COO–R′ que romper.', ['Se busca un C(=O) unido a un O que a su vez se une a otro carbono: no existe.']) };
+  if (sites.length > 1) return { error: fail('fuera_de_alcance', 'varios_esteres', 'Hay varios grupos éster (p. ej. un triglicérido): todavía no se soportan.') };
+  const { c, o2 } = sites[0];
+  const m = mol.clone();
+  m.setBond(c, o2, 0);
+  const oh = m.addAtom('O');
+  m.addBond(c, oh, 1);
+  const parts = m.split();
+  const acid = parts.find((p) => p.map.has(c));
+  const alcohol = parts.find((p) => p.map.has(o2));
+  if (!acid || !alcohol || acid === alcohol) return { error: fail('fuera_de_alcance', 'ester_ciclico', 'El éster está en un ciclo: no se separa en dos moléculas.') };
+  return { acid: acid.mol, alcohol: alcohol.mol };
+}
+
+/** @type {ReactionDef['run']} */
+function esterificacion(inputs) {
+  const info = inputs.map((s) => ({ s, acid: acidSites(/** @type {Molecule} */ (s.mol)), alc: alcoholSites(/** @type {Molecule} */ (s.mol)) }));
+  const a = info.find((x) => x.acid.length === 1 && x.alc.length === 0);
+  const b = info.find((x) => x.alc.length === 1 && x.acid.length === 0);
+  if (!a || !b) {
+    const algun = info.find((x) => (x.acid.length && x.alc.length) || x.acid.length > 1 || x.alc.length > 1);
+    if (algun) return fail('fuera_de_alcance', 'polifuncional', `«${algun.s.name ?? algun.s.formula}» tiene varios grupos –COOH/–OH: no elijo cuál reacciona.`);
+    return fail('sin_reaccion', 'roles', 'Se necesita un ácido carboxílico (con un solo –COOH) y un alcohol (con un solo –OH).', ['La esterificación une un ácido R–COOH con un alcohol R′–OH.']);
+  }
+  const m = new Molecule();
+  const mapA = m.merge(/** @type {Molecule} */ (a.s.mol));
+  const mapB = m.merge(/** @type {Molecule} */ (b.s.mol));
+  m.addBond(/** @type {number} */ (mapA.get(a.acid[0].c)), /** @type {number} */ (mapB.get(b.alc[0].o)), 1);
+  const ester = species(m.without([/** @type {number} */ (mapA.get(a.acid[0].o))]).mol);
+  const grade = cNeighbors(/** @type {Molecule} */ (b.s.mol), b.alc[0].c).length;
+  return {
+    products: [ester, inorganic('H2O')], conditions: 'H₂SO₄, calor', reversible: true,
+    steps: [
+      `El ácido (${a.s.name}) pierde su –OH y el alcohol (${b.s.name}) pierde su H: juntos forman H₂O.`,
+      'El grupo acilo R–C(=O)– se une al oxígeno del alcohol: nace el enlace éster –COO–.',
+      'El H₂SO₄ actúa como catalizador y la reacción es reversible (equilibrio).',
+    ],
+    notes: grade >= 3 ? ['Los alcoholes terciarios esterifican muy mal en estas condiciones (tienden a deshidratarse).'] : [],
+  };
+}
+
+/** @type {ReactionDef['run']} */
+function hidrolisis([s]) {
+  const sp = splitEster(/** @type {Molecule} */ (s.mol));
+  if ('error' in sp) return sp.error;
+  return {
+    products: [species(sp.acid), species(sp.alcohol)], reagents: [inorganic('H2O')], conditions: 'H⁺', reversible: true,
+    steps: [
+      'Se localiza el grupo éster –COO– y se rompe el enlace entre el C=O y el O del alcohol.',
+      'El agua aporta –OH al grupo acilo (se regenera el ácido) y H al oxígeno (se regenera el alcohol).',
+      'Es la reacción inversa a la esterificación, por eso es reversible.',
+    ],
+  };
+}
+
+/** @type {ReactionDef['run']} */
+function saponificacion([s], opts) {
+  const base = choose(opts, 'base', ['NaOH', 'KOH', 'LiOH'], 'NaOH');
+  if ('error' in base) return base.error;
+  const sp = splitEster(/** @type {Molecule} */ (s.mol));
+  if ('error' in sp) return sp.error;
+  const cation = base.value.slice(0, -2);
+  const salt = carboxylate(sp.acid, cation);
+  if (!salt) return fail('fuera_de_alcance', 'sin_un_carboxilo', 'El ácido resultante no tiene exactamente un –COOH: no se forma una sal sencilla.');
+  return {
+    products: [salt, species(sp.alcohol)], reagents: [inorganic(base.value)], conditions: 'calor',
+    steps: [
+      'Se localiza el grupo éster –COO– y se rompe el enlace entre el C=O y el O del alcohol.',
+      `La base fuerte (${base.value}) neutraliza el ácido que se forma: el ácido no queda libre, sino como carboxilato de ${CATION_NAME[cation]}.`,
+      'Como el ácido se consume al formar la sal, la reacción es irreversible (a diferencia de la hidrólisis ácida).',
+    ],
+    notes: ['Con ésteres de ácidos grasos esta es la reacción que produce jabón.'],
+  };
+}
+
+/** @type {ReactionDef['run']} */
+function descarboxilacion([s]) {
+  const mol = /** @type {Molecule} */ (s.mol);
+  const cation = /** @type {string} */ (s.cation);
+  const o = mol.atoms.find((a) => a.q === -1 && a.el === 'O');
+  const c = o ? mol.neighbors(o.id)[0] : null;
+  const o2 = c ? mol.neighbors(c.id).find((n) => n.order === 2 && el(mol, n.id) === 'O') : null;
+  if (!o || !c || !o2) return fail('fuera_de_alcance', 'sin_carboxilato', 'No encuentro el grupo carboxilato –COO⁻.');
+  if (!cNeighbors(mol, c.id).length) return fail('fuera_de_alcance', 'formiato', 'El metanoato (formiato) no da un alcano al descarboxilar: no se soporta.');
+  const { mol: rest } = mol.without([o.id, c.id, o2.id]);
+  if (!isAlkane(rest)) return fail('fuera_de_alcance', 'no_alcano', 'Solo se soporta la descarboxilación de sales de ácidos con cadena de alcano (sin otros grupos).');
+  const carbons = mol.atoms.filter((a) => a.el === 'C').length;
+  return {
+    products: [species(rest), inorganic(`${cation}2CO3`)], reagents: [inorganic(`${cation}OH`)], conditions: 'CaO, calor',
+    steps: [
+      `La sal tiene ${carbons} C; el bloque –COO${cation} se elimina.`,
+      `Con cal sodada (${cation}OH/CaO) y calor, el –COO⁻ sale como carbonato (${cation}₂CO₃) y el C unido a él recibe un H.`,
+      `Regla crítica: el alcano resultante tiene un carbono menos (${carbons - 1} C).`,
+    ],
+  };
+}
+
+// ───────────────────────── grupo D: fórmula y catálogo ─────────────────────────
+
+/** @type {ReactionDef['run']} */
+function combustion([s]) {
+  const mol = /** @type {Molecule} */ (s.mol);
+  if (mol.atoms.some((a) => a.q) || mol.atoms.some((a) => !['C', 'H', 'O'].includes(a.el))) {
+    return fail('fuera_de_alcance', 'elementos', 'La combustión completa del compendio es de compuestos de C, H y O (los halógenos, N o S dan otros productos).');
+  }
+  return {
+    products: [inorganic('CO2'), inorganic('H2O')], reagents: [inorganic('O2')], conditions: 'calor',
+    steps: [
+      `Fórmula del compuesto: ${mol.formula()}.`,
+      'La combustión completa con exceso de O₂ siempre produce CO₂ (cada C) y H₂O (cada H).',
+      'Se balancea contando los átomos de C, H y O a ambos lados (coeficientes enteros mínimos).',
+    ],
+  };
+}
+
+/** @type {ReactionDef['run']} */
+function polimerizacion([s]) {
+  const mol = /** @type {Molecule} */ (s.mol);
+  const unit = unitOfMonomer(mol, analyze);
+  const poly = polymerNameOf(mol, analyze);
+  if (!unit || !poly) return fail('fuera_de_alcance', 'sin_catalogo', `No tengo catalogado el polímero de «${s.name}» (solo monómeros vinílicos del catálogo), así que no invento una unidad repetitiva.`);
+  const r = speciesFromName(poly);
+  if (!r.ok) return fail('fuera_de_alcance', 'sin_catalogo', `No pude leer el polímero «${poly}».`);
+  return {
+    products: [{ ...r.species, name: poly }], noBalance: true, conditions: 'catalizador',
+    steps: [
+      `El monómero (${s.name}) tiene un doble enlace C=C.`,
+      'El doble enlace se abre y cada carbono se une al del monómero siguiente: queda una columna vertebral de 2 C repetida (–C–C–).',
+      `Unidad que se repite: ${unit}. Las ramificaciones quedan colgando de la cadena.`,
+    ],
+    notes: ['No se modelan n, la ordenación espacial ni los extremos de la cadena.'],
+  };
+}
+
 // ───────────────────────── registro y ensamblado ─────────────────────────
 
 /** @type {Record<string, ReactionDef>} */
@@ -354,6 +517,12 @@ export const REACTIONS = {
   markovnikov: { nombre: 'Adición electrofílica a alquenos (Markovnikov)', arity: 1, run: markovnikov },
   deshidratacion: { nombre: 'Deshidratación de alcoholes (Zaitsev)', arity: 1, run: deshidratacion },
   halogenacion: { nombre: 'Halogenación radicalar de alcanos', arity: 1, run: halogenacion },
+  esterificacion: { nombre: 'Esterificación de Fischer', arity: 2, run: esterificacion },
+  hidrolisis: { nombre: 'Hidrólisis ácida de ésteres', arity: 1, run: hidrolisis },
+  saponificacion: { nombre: 'Saponificación (hidrólisis alcalina de ésteres)', arity: 1, run: saponificacion },
+  descarboxilacion: { nombre: 'Descarboxilación de sales de ácidos carboxílicos', arity: 1, accept: ['salt'], run: descarboxilacion },
+  combustion: { nombre: 'Combustión completa', arity: 1, ringOk: true, run: combustion },
+  polimerizacion: { nombre: 'Polimerización por adición de alquenos', arity: 1, ringOk: true, run: polimerizacion },
 };
 
 const SUBS = '₀₁₂₃₄₅₆₇₈₉';
@@ -430,7 +599,7 @@ export function react(id, names, opts = {}) {
   const L = withCoef(left, coef?.reactants);
   const R = withCoef(out.products, coef?.products);
   const arrow = out.reversible ? '⇌' : '→';
-  const cond = out.conditions ? ` [${out.conditions}]` : '';
+  const arrowC = out.conditions ? `—[${out.conditions}]${arrow}` : arrow;
   const fmt = (/** @type {Species[]} */ list, /** @type {(s: Species) => string} */ f) => list.map((s) => `${coefText(s.coef ?? 1)}${f(s)}`).join(' + ');
   const unitPrefix = out.noBalance ? 'n ' : '';
   return {
@@ -441,8 +610,8 @@ export function react(id, names, opts = {}) {
     conditions: out.conditions ?? '',
     reversible: !!out.reversible,
     coefficients: coef,
-    equation: `${unitPrefix}${fmt(L, nameText)} ${arrow}${cond} ${fmt(R, nameText)}`,
-    equationSemi: `${unitPrefix}${fmt(L, semiText)} ${arrow}${cond} ${fmt(R, semiText)}`,
+    equation: `${unitPrefix}${fmt(L, nameText)} ${arrowC} ${fmt(R, nameText)}`,
+    equationSemi: `${unitPrefix}${fmt(L, semiText)} ${arrowC} ${fmt(R, semiText)}`,
     steps: out.steps,
     notes: out.notes ?? [],
   };
