@@ -113,3 +113,16 @@ test('ecuación: la combustión del etanol se escribe con coeficientes y nombres
   const r = react('combustion', ['etanol']);
   assert.equal(r.equation, 'etanol + 3 oxígeno —[calor]→ 2 dióxido de carbono + 3 agua');
 });
+
+test('dibujo: toda especie acíclica de las reacciones se dibuja sin errores', async () => {
+  const { renderSvg } = await import('../src/core/render.js');
+  for (const e of ORO) {
+    if (e.fuera || !REACTIONS[e.t]) continue;
+    const res = react(e.t, e.r, e.o ?? {});
+    for (const s of [...res.substrates, ...res.reagents, ...res.products]) {
+      if (s.mol && s.chain && s.kind === 'organic' && s.mol.isTree()) {
+        assert.match(renderSvg(s.mol, s.chain, { locants: false }), /<svg/, `${e.t}: ${s.name}`);
+      }
+    }
+  }
+});

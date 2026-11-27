@@ -4,6 +4,7 @@ import { renderSvg, semidesarrollada } from '../core/render.js';
 import { moleculeToDraft, moleculeToRing } from '../core/construct.js';
 import { showView } from './vistas.js';
 import { loadDraft } from './constructor.js';
+import './reacciones.js';
 
 const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
 const input = /** @type {HTMLInputElement} */ ($('nombre'));
