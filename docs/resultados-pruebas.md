@@ -29,7 +29,18 @@ Fecha: 2026-11-21 (v0.2: 2026-11-18) · Comandos: `npm test`, `npm run typecheck
 | T11 constructor visual / «verifica mi respuesta» | ✅ | `construct.test.js` (26), `construct-ring.test.js` (5); UI con `tools/smoke-ui.mjs` |
 | T12 benceno y derivados (plan Química III) | ✅ | `molecule-ring.test.js`, `aromatic-build.test.js` (26), `aromatic-name.test.js` (incluye ida y vuelta exhaustiva), `aromatic-analyze.test.js`, `plan-quimica-iii.test.js`, `oro-aromaticos.test.js` (46 compuestos / 74 nombres), `aromatic-variantes.test.js` (equivalentes y nombres comunes, 2000 anillos), `aromatic-propiedad.test.js` (4000 anillos al azar ×2, 12 simetrías, constructor, fuzz de entradas) |
 
+| T13 reacciones (compendio, 12 tipos) | ✅ | `balance.test.js` (balanceo exacto, operaciones de grafo, especies), `reacciones.test.js` (tabla de oro `oro-reacciones.json`: 60 ejemplos, 57 reaccionan y 3 se declaran fuera de alcance; negativos; ida y vuelta de nombres; dibujo) |
+
 ## Hallazgos durante la ejecución
+
+### Reacciones (23–26-nov)
+
+- **Error del compendio, oxidación ej. 2:** el nombre decía 3-metil-2-pentanol pero la estructura dibujada es 2-metil-3-pentanol. La tabla de oro conserva la estructura y corrige el nombre.
+- **Fuera de alcance declarado (3 de 60):** ciclopentano (halogenación ej. 5), ciclohexeno (hidrogenación ej. 5) y benzoato de metilo (saponificación ej. 5). El motor devuelve `fuera_de_alcance` sin producto.
+- **Error propio detectado por la prueba de dibujo/UI:** `renderSvg` entraba en recursión infinita con moléculas de anillo (estireno). La pestaña ahora usa el dibujo aromático propio y una prueba recorre todas las especies acíclicas.
+- **Decisiones de diseño:** Cl₂ muestra mezcla (el compendio marcaba «principal»); Markovnikov con empate de H devuelve ambos productos; alcohol terciario devuelve `sin_reaccion` con explicación; cis/trans no se distingue.
+- **Oráculo:** el compendio y su tabla de oro los revisó un asistente; falta validación docente (preguntas en `docs/reacciones.md`).
+
 
 ### T10 (v0.3)
 

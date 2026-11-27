@@ -1,9 +1,9 @@
 # Cobertura del plan de estudios escolar (Química III)
 
 Criterio acordado: el sistema debe cubrir **como mínimo** los compuestos orgánicos y estructuras que
-menciona el plan. Las **reacciones** (halogenación, oxidación, esterificación, saponificación,
-polimerización…) no entran en el plan ni en el proyecto: solo interesan los nombres y estructuras
-que aparecen en ellas. Donde el plan contradice la delimitación inicial del proyecto (que dejaba
+menciona el plan. Las **reacciones** no entran en el plan escolar, pero desde el 23-nov-2026 el proyecto incluye un
+módulo de reacciones (compendio de 12 tipos, ver `docs/reacciones.md`) que reutiliza los nombres y
+estructuras ya soportados. Donde el plan contradice la delimitación inicial del proyecto (que dejaba
 fuera los aromáticos), **manda el plan**.
 
 La prueba `test/plan-quimica-iii.test.js` ejecuta todas las listas de abajo (lectura → molécula

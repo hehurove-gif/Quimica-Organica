@@ -16,6 +16,7 @@
   <nav class="vistas" role="tablist" aria-label="Modo">
     <button type="button" role="tab" id="tab-nombre" aria-selected="true" aria-controls="vista-nombre">Nombre → estructura</button>
     <button type="button" role="tab" id="tab-constructor" aria-selected="false" aria-controls="vista-constructor">Construir y verificar</button>
+    <button type="button" role="tab" id="tab-reacciones" aria-selected="false" aria-controls="vista-reacciones">Reacciones</button>
   </nav>
 
   <main id="vista-nombre" role="tabpanel" aria-labelledby="tab-nombre">
@@ -157,8 +158,37 @@
     </div>
   </main>
 
+  <main id="vista-reacciones" role="tabpanel" aria-labelledby="tab-reacciones" hidden>
+    <section class="entrada" aria-labelledby="r-lbl">
+      <label id="r-lbl" for="r-tipo">Reacción</label>
+      <select id="r-tipo"></select>
+      <div id="r-campos" class="r-campos"></div>
+      <div id="r-ejemplos" class="ejemplos" role="group" aria-label="Ejemplos"><span>Prueba:</span></div>
+      <label class="chk"><input id="r-practica" type="checkbox"> Modo práctica: adivina los productos</label>
+    </section>
+    <div id="r-estado" class="estado" role="status" aria-live="polite"></div>
+    <div id="r-resultado" hidden>
+      <section aria-label="Ecuación">
+        <h2>Ecuación</h2>
+        <p id="r-eq" class="semi"></p>
+        <p id="r-eq-nombres" class="r-nombres"></p>
+      </section>
+      <section id="r-practica-caja" hidden>
+        <h2>Tu respuesta</h2>
+        <input id="r-resp" type="text" autocomplete="off" spellcheck="false" placeholder="Nombre del producto orgánico principal">
+        <div id="r-veredicto" class="veredicto" role="status"></div>
+        <button type="button" id="r-revelar" class="btn">Mostrar la respuesta</button>
+      </section>
+      <div id="r-solucion">
+        <section aria-label="Especies"><h2>Estructuras</h2><div id="r-especies" class="r-especies"></div></section>
+        <section aria-label="Explicación paso a paso"><h2>Paso a paso</h2><ol id="r-pasos" class="pasos"></ol></section>
+        <ul id="r-notas" class="r-notas"></ul>
+      </div>
+    </div>
+  </main>
+
   <footer>
-    <p>v0.3 · Alcanos, alquenos, alquinos, halogenuros, alcoholes, éteres, aldehídos, cetonas, ácidos, ésteres, aminas y amidas; cadenas de hasta 99 carbonos (el constructor llega a 10).</p>
+    <p>v0.3 · Alcanos, alquenos, alquinos, halogenuros, alcoholes, éteres, aldehídos, cetonas, ácidos, ésteres, aminas y amidas; cadenas de hasta 99 carbonos (el constructor llega a 10). Pestaña Reacciones: 12 tipos del compendio.</p>
     <p>Developed by <a href="https://hetor.hehurove.workers.dev/es">Hetor</a></p>
   </footer>
 

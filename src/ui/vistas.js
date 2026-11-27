@@ -1,8 +1,8 @@
 // @ts-check
 /** Pestañas: «Nombre → estructura» y «Construir y verificar». */
-const VISTAS = /** @type {const} */ (['nombre', 'constructor']);
+const VISTAS = /** @type {const} */ (['nombre', 'constructor', 'reacciones']);
 
-/** @param {'nombre' | 'constructor'} cual */
+/** @param {'nombre' | 'constructor' | 'reacciones'} cual */
 export function showView(cual) {
   for (const v of VISTAS) {
     const sel = v === cual;

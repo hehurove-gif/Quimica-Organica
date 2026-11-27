@@ -43,3 +43,9 @@ texto ──► parser.js ──► AST ──► build.js ──► Molecule �
 ## Derivados del benceno
 
 Módulo propio, separado del analizador de cadenas: `aromatic.js` (lectura de nombres, construcción, nombre IUPAC), `aromatic-analysis.js` (estados, notas, pasos), `aromatic-render.js` (hexágono SVG y fórmula condensada). `analyze()` lo consulta primero; si el texto no termina en un padre aromático, sigue el flujo de cadenas. El anillo se modela con enlaces de Kekulé; `Molecule.canonicalKey()` lo trata como aromático (menor de 12 lecturas). El nitro usa cargas formales (N⁺, O⁻) y el sulfo azufre con valencia 6. El constructor admite `RingDraft` (6 posiciones).
+
+## Reacciones
+
+Capa sobre el núcleo (no lo modifica salvo por operaciones de grafo nuevas): `species.js` (orgánicas, sales, polímeros e inorgánicas de catálogo cerrado, con conteo de átomos y clave de igualdad), `balance.js` (espacio nulo exacto con BigInt: coeficientes enteros mínimos) y `reactions.js` (`react(id, nombres, opciones)` → `ReactionResult`). Cada reacción es una función que clona el grafo y cambia órdenes de enlace o quita/une átomos; los H implícitos se recalculan solos. Detalle en `docs/reacciones.md`.
+
+`Molecule` ganó `clone()`, `setBond()`, `without()`, `split()` y `merge()` (antes un grafo construido no se podía editar).

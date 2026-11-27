@@ -107,3 +107,17 @@ input[type=range] { width: 100%; }
 .anillo-hex .carbono { min-width: 0; }
 .anillo-hex .carbono select { max-width: 100%; width: 100%; }
 .anillo-hex select.usada { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+
+/* Reacciones */
+#r-tipo { font: inherit; font-size: 1rem; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); max-width: 100%; }
+.r-campos { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; align-items: end; }
+.r-campos label { display: grid; gap: 2px; font-size: .85rem; }
+.r-campos input, .r-campos select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); min-width: 180px; }
+.r-nombres { color: var(--muted, inherit); font-size: .92rem; }
+.r-especies { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.r-esp { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.r-esp h3 { margin: 0 0 4px; font-size: .95rem; }
+.r-esp small { display: block; color: var(--muted, inherit); }
+.r-esp .svg { overflow-x: auto; }
+.r-esp.sec { opacity: .75; border-style: dashed; }
+.r-notas { padding-left: 1.2em; font-size: .92rem; }
